@@ -419,22 +419,31 @@ class ConfigRPSettingsUI(Qt.QWidget):
 			# For 200 MHz external clock input, these settings should yield 125 MHz ADC clock, 1000 MHz VCO
 			f_ext          = 200e6
 			CLKFBOUT_MULT  = 5
+			CLKFBOUT_FRAC  = 0
 			CLKOUT0_DIVIDE = 8
 
 			# # For 10 MHz external clock input, these settings should yield 124 MHz ADC clock, 620 MHz VCO
 			# f_ext          = 10e6
 			# CLKFBOUT_MULT  = 62
+			# CLKFBOUT_FRAC  = 0
 			# CLKOUT0_DIVIDE = 5
 
-			self.sl.setADCclockPLL(f_ext, self.qradio_external_clk.isChecked(), CLKFBOUT_MULT, CLKOUT0_DIVIDE)
+			# # For 180 MHz external clock input, these settings should yield 125 MHz ADC clock, 1125 MHz VCO
+			# f_ext          = 180e6
+			# CLKFBOUT_MULT  = 6
+			# CLKFBOUT_FRAC  = 250
+			# CLKOUT0_DIVIDE = 9
+
+			self.sl.setADCclockPLL(f_ext, self.qradio_external_clk.isChecked(), CLKFBOUT_MULT, CLKFBOUT_FRAC, CLKOUT0_DIVIDE)
 
 		else:
 			# For 200 MHz clock (internal), these settings should yield 125 MHz ADC clock, 1000 MHz VCO
 			f_int          = 200e6
 			CLKFBOUT_MULT  = 5
+			CLKFBOUT_FRAC  = 0
 			CLKOUT0_DIVIDE = 8
 
-			self.sl.setADCclockPLL(f_int, self.qradio_external_clk.isChecked(), CLKFBOUT_MULT, CLKOUT0_DIVIDE) # calling this crashes the thing...
+			self.sl.setADCclockPLL(f_int, self.qradio_external_clk.isChecked(), CLKFBOUT_MULT, CLKFBOUT_FRAC, CLKOUT0_DIVIDE) # calling this crashes the thing...
 
 
 		# make sure to update the lockpoint frequencies, in case the ADC clock frequency changed:

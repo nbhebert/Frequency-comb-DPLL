@@ -1954,7 +1954,7 @@ class SuperLaserLand_JD_RP:
 		return self.clk_select
 
 	# f_source is the frequency of the selected clock source (200 MHz in internal clock mode, can be whatever is connected to GPIO_P[5] in external clock mode)
-	def setADCclockPLL(self, f_source, bExternalClock, CLKFBOUT_MULT, CLKOUT0_DIVIDE):
+	def setADCclockPLL(self, f_source, bExternalClock, CLKFBOUT_MULT, CLKFBOUT_FRAC, CLKOUT0_DIVIDE):
 		DIVCLK_DIVIDE = 1
 		VCO_freq = f_source * CLKFBOUT_MULT/DIVCLK_DIVIDE
 		print('VCO_freq = %f MHz, valid range is 600-1600 MHz according to the datasheet (DS181)' % (VCO_freq/1e6))
@@ -1969,6 +1969,7 @@ class SuperLaserLand_JD_RP:
 		# Clock configuration register 0 (table 4-2 in PG065)
 		reg  = (DIVCLK_DIVIDE & ((1<<8)-1)) << 0
 		reg |= (CLKFBOUT_MULT & ((1<<8)-1)) << 8
+		reg |= (CLKFBOUT_FRAC & ((1<<16)-1)) << 16
 		self.dev.write_Zynq_AXI_register_uint32(self.clkw_base_addr + 0x200, reg)
 		# Clock configuration register 2 (table 4-2 in PG065)
 		reg = (CLKOUT0_DIVIDE & ((1<<8)-1)) << 0
