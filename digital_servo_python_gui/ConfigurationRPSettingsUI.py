@@ -524,10 +524,10 @@ class ConfigRPSettingsUI(Qt.QWidget):
 		self.sl.set_fopt_gain(fopt_gain)
 
 		#update lineedit value for the diff phase gain
-		phidiffgain = self.sl.get_phidiffgain()
-		self.qedit_phidiffgain.blockSignals(True)
-		self.qedit_phidiffgain.setText('{:.4f}'.format(phidiffgain))
-		self.qedit_phidiffgain.blockSignals(False)
+		fopt_gain = self.sl.get_fopt_gain()
+		self.qedit_fopt_gain.blockSignals(True)
+		self.qedit_fopt_gain.setText('{:.4f}'.format(fopt_gain))
+		self.qedit_fopt_gain.blockSignals(False)
 
 	
 if __name__ == '__main__':

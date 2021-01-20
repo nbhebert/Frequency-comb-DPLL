@@ -57,7 +57,7 @@ begin
     begin
         if rising_edge(clk) then
             --Scale the CEO freq noise (by factor (nu1 - nu2)/nu1), scale the optical freq noise (by factor 1-(nu1 - nu2)/nu1), and sum together
-            freqSum_scaleUp <= signed(freqCEO)*signed(scale_up) + signed(freqOptical)*(to_signed(1,scale_up'length)-signed(scale_up));
+            freqSum_scaleUp <= signed(freqCEO)*signed(scale_up) + signed(freqOptical)*(to_signed(2**bit_shift_scale_down,scale_up'length)-signed(scale_up));
             -- Scale down the result. When dividing by 2**bit_shift_scale_down, we add 1/2 LSB to perform round instead of floor.
             freqOut <= std_logic_vector(resize(shift_right(freqSum_scaleUp + to_signed(2**(bit_shift_scale_down-1),freqSum_scaleUp'length),bit_shift_scale_down),freqOut'length));
         end if;
