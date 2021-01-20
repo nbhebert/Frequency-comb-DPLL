@@ -743,6 +743,33 @@ DDC_wideband_filters DDC1_inst (
     );
 
 
+//We can modify the measured optical beat frequency noise to mimic the noise at a different wavelength (e.g.) 1560nm via a linear combination of fceo and foptical.
+wire        [10-1:0]    DDC1_output_1560nm;
+wire        [18-1:0]    gain_scalefopt;
+
+//Register that holds the scaling factor
+parallel_bus_register_32bits_or_less # (
+    .REGISTER_SIZE(18),
+    .REGISTER_DEFAULT_VALUE(0),
+    .ADDRESS(16'h9020)
+)
+parallel_bus_register_gain_scalefopt (
+    .clk(clk1), 
+    .bus_strobe(cmd_trig), 
+    .bus_address(cmd_addr), 
+    .bus_data({cmd_data2in, cmd_data1in}), 
+    .register_output(gain_scalefopt), 
+    .update_flag()
+    );
+
+//Make a linear combination of fceo and fopt
+construct1560nmfreqNoise (                       
+        .clk(clk1), 
+        .freqCEO(inst_frequency0), 
+        .freqOptical(DDC1_output),
+        .scale_up(gain_scalefopt),
+        .freqOut(DDC1_output_1560nm)
+        );   
 
 
 wire [2-1:0] loop_filter_1_mux_selector;
@@ -764,7 +791,7 @@ parallel_bus_register_mux_pll1  (
 multiplexer_3to1_async loop_filters_1_mux (
  .clk                               (clk1                       ),
  .selector_mux                      (loop_filter_1_mux_selector ),
- .in0_mux                           (DDC1_output                ), 
+ .in0_mux                           (DDC1_output_1560nm         ), 
  .in1_mux                           (inst_frequency0            ),
  .in2_mux                           (pll0_output >> 5           ), //pll0_output is 15 bits and in2_mux is 10 bits
  .out_mux                           (inst_frequency1            )

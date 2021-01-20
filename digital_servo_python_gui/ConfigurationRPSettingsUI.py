@@ -47,7 +47,7 @@ class ConfigRPSettingsUI(Qt.QWidget):
 		vco_amplitude = float((self.sp.getValue('VCO_settings', "VCO_amplitude")))
 		vco_offset = float((self.sp.getValue('VCO_settings', "VCO_offset")))
 		clk_select = int((self.sp.getValue('RP_settings', "Clock_select")))
-
+		fopt_gain = float((self.sp.getValue('RP_settings', "fopt_gain")))
 		#print("ConfigurationRPSettingsUI::loadParameters(): after read GUI")
 
 		if clk_select > 0:
@@ -82,6 +82,9 @@ class ConfigRPSettingsUI(Qt.QWidget):
 		self.qedit_int_vco_offset.setText('{:.3f}'.format(vco_offset))
 		self.qedit_int_vco_offset.blockSignals(False)
 
+		self.qedit_fopt_gain.blockSignals(True)
+		self.qedit_fopt_gain.setText('{:.4f}'.format(fopt_gain))
+		self.qedit_fopt_gain.blockSignals(False)                                           
 		#print("ConfigurationRPSettingsUI::loadParameters(): end")
 
 	def pushDefaultValues(self):
@@ -97,6 +100,7 @@ class ConfigRPSettingsUI(Qt.QWidget):
 		self.setInternalVCO_amplitude()
 		self.setFan()
 		self.setClkSelect()
+		self.setfoptGain()
 
 	@logCommsErrorsAndBreakoutOfFunction()
 	def getValues(self):
@@ -132,6 +136,11 @@ class ConfigRPSettingsUI(Qt.QWidget):
 		elif mux_pll2 == 2:
 			self.qradio_pll1_to_pll2.setChecked(True)
 		
+		#get value for the fopt gain
+		fopt_gain = self.sl.get_fopt_gain()
+		self.qedit_fopt_gain.blockSignals(True)
+		self.qedit_fopt_gain.setText('{:.4f}'.format(fopt_gain))
+		self.qedit_fopt_gain.blockSignals(False)                                    
 		# clock source
 		clk_select = self.sl.read_clk_select()
 		if clk_select > 0:
@@ -258,6 +267,14 @@ class ConfigRPSettingsUI(Qt.QWidget):
 		MUX_pll2.addWidget(self.qradio_pll1_to_pll2, 	1, 0)
 		MUX_pll2.addWidget(self.qradio_ddc2_to_pll2, 	2, 0)
 		MUX_pll2.setRowStretch(2, 0)
+
+		self.qlabel_fopt_gain = Qt.QLabel('Factor to project f_opt at 192 THz ((f_opt-192 THz)/f_opt) [-2 to 2]')
+		self.qedit_fopt_gain = user_friendly_QLineEdit('0.0')
+		self.qedit_fopt_gain.returnPressed.connect(self.setfoptGain)
+		self.qedit_fopt_gain.setMaximumWidth(60)
+
+		MUX_pll2.addWidget(self.qlabel_fopt_gain, 0,1)
+		MUX_pll2.addWidget(self.qedit_fopt_gain, 1,1)
 
 		self.qgroupbox_MUX_pll2.setLayout(MUX_pll2)
 
@@ -495,6 +512,22 @@ class ConfigRPSettingsUI(Qt.QWidget):
 			data = 0
 		self.sl.set_mux_pll2(data)
 
+	@logCommsErrorsAndBreakoutOfFunction()
+	def setfoptGain(self):
+		try:
+			fopt_gain = float(self.qedit_fopt_gain.text())
+		except:
+			fopt_gain = 0.0
+		if fopt_gain <= -2.0 or fopt_gain >= 2.0:
+			fopt_gain = 0.0
+		
+		self.sl.set_fopt_gain(fopt_gain)
+
+		#update lineedit value for the diff phase gain
+		phidiffgain = self.sl.get_phidiffgain()
+		self.qedit_phidiffgain.blockSignals(True)
+		self.qedit_phidiffgain.setText('{:.4f}'.format(phidiffgain))
+		self.qedit_phidiffgain.blockSignals(False)
 
 	
 if __name__ == '__main__':

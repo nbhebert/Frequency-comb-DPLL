@@ -271,6 +271,8 @@ class SuperLaserLand_JD_RP:
 	# mux to select which signal goes in pll2 : the output of the DEMOD1, PLL1 or DEMOD2
 	BUS_ADDR_mux_pll2                                   = 0x9000
 
+	#Settings to set gain on fopt 
+	BUS_ADDR_fopt_gain                                  = 0x9020                                                              
 	BUS_ADDR_openLoopGain 								= [0x9010, 0x9011, 0x9012]
 
 
@@ -1793,6 +1795,23 @@ class SuperLaserLand_JD_RP:
 		self.send_bus_cmd_16bits(self.BUS_ADDR_mux_pll2, register_value)
 		
 	
+	def set_fopt_gain(self, fopt_gain):
+		#Sets the gain to project fopt at 192THz
+		if self.bVerbose == True:
+			print('set_internal_gain_for_fopt')
+		NDIVIDE = 16 #2**16 = 65536
+		fopt_gain_reg = int(round(fopt_gain*2**NDIVIDE))
+		self.send_bus_cmd_32bits(self.BUS_ADDR_fopt_gain, fopt_gain_reg)
+                                            
+
+	def get_fopt_gain(self):
+		if self.bVerbose == True:
+			print('get_internal_gain_for_fopt')
+		fopt_gain_reg = self.read_RAM_dpll_wrapper(self.BUS_ADDR_fopt_gain)
+		if fopt_gain_reg > ((1<<17)-1):
+			fopt_gain_reg = -(0b111111111111111111-fopt_gain_reg+1) 	#Because the value is consider as an signed integer
+		NDIVIDE = 16 #2**16 = 65536
+		return fopt_gain_reg/2**NDIVIDE
 
 		
 	# scales the offset of the output tone produced by the VCO right before the ADC.
