@@ -268,7 +268,7 @@ class ConfigRPSettingsUI(Qt.QWidget):
 		MUX_pll2.addWidget(self.qradio_ddc2_to_pll2, 	2, 0)
 		MUX_pll2.setRowStretch(2, 0)
 
-		self.qlabel_fopt_gain = Qt.QLabel('Factor to project f_opt at 192 THz ((f_opt-192 THz)/f_opt) [-2 to 2]')
+		self.qlabel_fopt_gain = Qt.QLabel('Factor to project f_opt to different f using fceo ((f_opt-f)/f_opt) [-2 to 2]')
 		self.qedit_fopt_gain = user_friendly_QLineEdit('0.0')
 		self.qedit_fopt_gain.returnPressed.connect(self.setfoptGain)
 		self.qedit_fopt_gain.setMaximumWidth(60)

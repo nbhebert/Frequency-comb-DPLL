@@ -1801,6 +1801,8 @@ class SuperLaserLand_JD_RP:
 			print('set_internal_gain_for_fopt')
 		NDIVIDE = 16 #2**16 = 65536
 		fopt_gain_reg = int(round(fopt_gain*2**NDIVIDE))
+		if fopt_gain < 0:
+			fopt_gain_reg = 0b111111111111111111+fopt_gain_reg+1
 		self.send_bus_cmd_32bits(self.BUS_ADDR_fopt_gain, fopt_gain_reg)
                                             
 
