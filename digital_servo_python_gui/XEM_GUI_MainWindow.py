@@ -177,6 +177,12 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
 		self.displayDAC()   # This populates the current DAC values with the actual value
 		self.qchk_refresh.setChecked(False)
 		self.refreshChk_event()
+        
+		#get value for the fopt gain
+		fopt_gain = self.sl.get_fopt_gain()
+		self.qedit_fopt_gain.blockSignals(True)
+		self.qedit_fopt_gain.setText('{:.4f}'.format(fopt_gain))
+		self.qedit_fopt_gain.blockSignals(False)  
 
 	def pushActualValues(self):
 		print("Push actual values of MainWindow, TODO")
@@ -365,7 +371,24 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
 		self.qedit_ref_freq.blockSignals(True)
 		self.qedit_ref_freq.setText('%.2e' % abs(frequency_in_hz))
 		self.qedit_ref_freq.blockSignals(False)
+        
+	@logCommsErrorsAndBreakoutOfFunction()
+	def setfoptGain(self):
+		try:
+			fopt_gain = float(self.qedit_fopt_gain.text())
+		except:
+			fopt_gain = 1.0
+		if fopt_gain < 0 or fopt_gain >= 2.0:
+			fopt_gain = 1.0
 		
+		self.sl.set_fopt_gain(fopt_gain)
+
+		#update lineedit value for the diff phase gain
+		fopt_gain = self.sl.get_fopt_gain()
+		self.qedit_fopt_gain.blockSignals(True)
+		self.qedit_fopt_gain.setText('{:.4f}'.format(fopt_gain))
+		self.qedit_fopt_gain.blockSignals(False)
+
 	def refreshChk_event(self):
 		if self.qchk_refresh.isChecked():
 			# We are doing a not running->running transition
@@ -797,6 +820,11 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
 			
 			self.qlabel_detected_vco_gain[2] = Qt.QLabel('0 Hz/V')
 			self.qlabel_detected_vco_gain[2].setAlignment(Qt.Qt.AlignHCenter)
+            
+			self.qlabel_fopt_gain = Qt.QLabel('Factor f/fopt for noise projection:')
+			self.qedit_fopt_gain = user_friendly_QLineEdit('1.0')
+			self.qedit_fopt_gain.returnPressed.connect(self.setfoptGain)
+			self.qedit_fopt_gain.setMaximumWidth(60)
 
 		
 		# DDC reference frequency:
@@ -921,11 +949,12 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
 			
 			grid2.addWidget(self.qedit_vco_gain[2],                         0, 2)
 			# grid2.addWidget(self.qlabel_detected_vco_gain[2],               1, 2)
-		
+			grid.addWidget(self.qlabel_fopt_gain, 0,8)
+			grid.addWidget(self.qedit_fopt_gain, 1,8)
+        
 		grid.addLayout(grid2, 0, 5, 2, 2)        
 		grid.addWidget(self.qsign_positive,             0, 7)
 		grid.addWidget(self.qsign_negative,             1, 7)
-		
 
 		
 		grid.addWidget(Qt.QLabel(),                     0, 9, 1, 1)
@@ -1183,13 +1212,19 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
 				# self.q_dac_offset[k].blockSignals(False)
 				self.spectrum.setDacOffset(k, slider_units)
 				# print('done calling dac offset slider setValue()')
-				
+
 
 		# Get ddc reference frequency from the system parameters object and set it in the UI:
 		strDDC = 'DDC{:01d}'.format(self.selected_ADC)
 		str_ref_freq = (self.sp.getValue('Reference_frequency', strDDC))
 		self.qedit_ref_freq.setText(str_ref_freq)
 		self.qedit_ref_freq.reset_my_color()
+        
+        # Get fopt projection gain
+		fopt_gain = float((self.sp.getValue('RP_settings', "fopt_gain")))
+		self.qedit_fopt_gain.blockSignals(True)
+		self.qedit_fopt_gain.setText('{:.4f}'.format(fopt_gain))
+		self.qedit_fopt_gain.blockSignals(False)        
 			
 		# print('done loadParameters()')
 		return
@@ -1218,6 +1253,7 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
 			self.setVCOFreq_event()
 			self.setVCOGain_event()
 			self.chkLockClickedEvent()
+			self.setfoptGain()
 			if self.output_controls[0] == True:
 				self.setPWM0_event()
 
