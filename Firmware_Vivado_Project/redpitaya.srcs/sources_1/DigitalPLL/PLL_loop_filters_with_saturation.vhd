@@ -70,10 +70,10 @@ architecture Behavioral of PLL_loop_filters_with_saturation is
 	component pll_wide_mult
 	port (
 		clk  : in std_logic;
-		a    : in std_logic_vector(25-1 downto 0);
+		a    : in std_logic_vector(20 downto 0);
 		b    : in std_logic_vector(31 downto 0);
 		sclr : in std_logic;
-		p    : out std_logic_vector(57-1 downto 0));
+		p    : out std_logic_vector(52 downto 0));
 	end component;
 	
 	-- Multiplier, 32x32 input bits, 64 output bits, synchronous clear
@@ -99,13 +99,14 @@ architecture Behavioral of PLL_loop_filters_with_saturation is
 	-- Internal variables
 	-----------------------------------------------------------------------
 	-- P branch signals
-	signal p_mult_output                        : std_logic_vector(57-1 downto 0) := (others => '0');
+	signal p_mult_output                        : std_logic_vector(52 downto 0) := (others => '0');
 	signal p_out                                : std_logic_vector(N_OUTPUT-1 downto 0) := (others => '0');
 	signal p_railed_positive, p_railed_negative : std_logic := '0';
 	  -- Boxcar low-pass filter
-    constant LOG2_MAXIMUM_SIZE_16384_PTS : integer := 15;
-    constant N_PTS : std_logic_vector(LOG2_MAXIMUM_SIZE_16384_PTS-1 downto 0) := std_logic_vector(to_unsigned(208, LOG2_MAXIMUM_SIZE_16384_PTS));
-    signal data_filt : std_logic_vector(data_in'length+LOG2_MAXIMUM_SIZE_16384_PTS-1 downto 0);
+    constant LOG2_MAXIMUM_SIZE_2047_PTS : integer := 11;
+    constant LOG2_FILTER_SIZE : integer := 8;
+    constant N_PTS : std_logic_vector(LOG2_MAXIMUM_SIZE_2047_PTS-1 downto 0) := std_logic_vector(to_unsigned(2**LOG2_FILTER_SIZE, LOG2_MAXIMUM_SIZE_2047_PTS));
+    signal data_filt : std_logic_vector(data_in'length+LOG2_MAXIMUM_SIZE_2047_PTS-1 downto 0);
    
 	-- This accumulator integrates the frequency error to yield the phase error, and its result is used by both the I and the I^2 branch:
 	-- We arbitrarily decide on using 32 bits for the result (mostly because it fits well in the next 32x32 MULT)
@@ -163,7 +164,7 @@ begin
 	-- Boxcar low-pass filter
     boxcar_filter_Pgain_inst : entity work.adjustable_boxcar_filter_v2
     generic map (
-        LOG2_MAXIMUM_SIZE => LOG2_MAXIMUM_SIZE_16384_PTS,
+        LOG2_MAXIMUM_SIZE => LOG2_MAXIMUM_SIZE_2047_PTS,
         DATA_WIDTH => data_in'length
     ) port map (
         rst => synchronous_clear,
@@ -187,13 +188,13 @@ begin
 	-- Division by 2^N_DIVIDE_P and saturation for P branch, adds 1 cycle of delay:
 	p_saturation_inst: entity work.resize_with_saturation
 	GENERIC MAP (
-		N_INPUT           => p_mult_output'length-N_DIVIDE_P-8,
+		N_INPUT           => p_mult_output'length-N_DIVIDE_P-LOG2_FILTER_SIZE,
 		N_OUTPUT          => p_out'length
 	)
 	PORT MAP (
 		clk               => clk,
 		synchronous_clear => synchronous_clear,
-		data_in           => p_mult_output(p_mult_output'length-1 downto N_DIVIDE_P+8),
+		data_in           => p_mult_output(p_mult_output'length-1 downto N_DIVIDE_P+LOG2_FILTER_SIZE),
 		railed_positive   => p_railed_positive,
 		railed_negative   => p_railed_negative,
 		data_out          => p_out
