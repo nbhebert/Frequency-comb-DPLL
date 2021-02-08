@@ -4,7 +4,7 @@
 -- 
 -- Create Date: 20.01.2021 11:48:21
 -- Design Name: 
--- Module Name: construct1560nmfreqNoise - Behavioral
+-- Module Name: projectFreqNoise - Behavioral
 -- Project Name: 
 -- Target Devices: 
 -- Tool Versions: 
@@ -31,23 +31,21 @@ use ieee.numeric_std.all;
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-entity construct1560nmfreqNoise is
+entity projectFreqNoise is
     Port ( clk : in STD_LOGIC;
            freqCEO     : in STD_LOGIC_VECTOR (9 downto 0);
            freqOptical : in STD_LOGIC_VECTOR (9 downto 0);
            scale_up     : in STD_LOGIC_VECTOR (18-1 downto 0);
            freqOut     : out STD_LOGIC_VECTOR (9 downto 0));
-end construct1560nmfreqNoise;
+end projectFreqNoise;
 
-architecture Behavioral of construct1560nmfreqNoise is
+architecture Behavioral of projectFreqNoise is
 
 constant NDATA : integer := freqCEO'length;
 constant NSCALE : integer := scale_up'length;
 
 constant bit_shift_scale_down : integer := 16;--2**16 = 65536
 signal freqSum_scaleUp : signed(NDATA+NSCALE-1 downto 0) := (others => '0');
-signal freqOptical_scaleUp : signed(NDATA+NSCALE-1 downto 0) := (others => '0');
-
 
 
 begin

@@ -178,6 +178,12 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
         self.qchk_refresh.setChecked(False)
         self.refreshChk_event()
         
+        if self.selected_ADC == 0:
+            #get value for the fceo gain
+            fceo_gain = self.sl.get_fceo_gain()
+            self.qedit_fceo_gain.blockSignals(True)
+            self.qedit_fceo_gain.setText('{:.4f}'.format(fceo_gain))
+            self.qedit_fceo_gain.blockSignals(False) 
         if self.selected_ADC == 1:
             #get value for the fopt gain
             fopt_gain = self.sl.get_fopt_gain()
@@ -195,6 +201,10 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
         # Send values to FPGA
         self.setVCOFreq_event()
         self.setVCOGain_event()
+        if self.selected_ADC == 0:
+            self.setfceoGain()
+        if self.selected_ADC == 1:
+            self.setfoptGain()
         self.chkLockClickedEvent()
 
         self.timerIDDither = Qt.QTimer(self)
@@ -372,6 +382,23 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
         self.qedit_ref_freq.blockSignals(True)
         self.qedit_ref_freq.setText('%.2e' % abs(frequency_in_hz))
         self.qedit_ref_freq.blockSignals(False)
+
+    @logCommsErrorsAndBreakoutOfFunction()
+    def setfceoGain(self):
+        try:
+            fceo_gain = float(self.qedit_fceo_gain.text())
+        except:
+            fceo_gain = 0.0
+        if fceo_gain < 0 or fceo_gain >= 2.0:
+            fceo_gain = 0.0
+        
+        self.sl.set_fceo_gain(fceo_gain)
+
+        #update lineedit value for the diff phase gain
+        fceo_gain = self.sl.get_fceo_gain()
+        self.qedit_fceo_gain.blockSignals(True)
+        self.qedit_fceo_gain.setText('{:.4f}'.format(fceo_gain))
+        self.qedit_fceo_gain.blockSignals(False)
         
     @logCommsErrorsAndBreakoutOfFunction()
     def setfoptGain(self):
@@ -800,6 +827,11 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
             
             self.qlabel_detected_vco_gain[0] = Qt.QLabel('0 Hz/V')
             self.qlabel_detected_vco_gain[0].setAlignment(Qt.Qt.AlignHCenter)
+
+            self.qlabel_fceo_gain = Qt.QLabel('Factor f/fopt for noise projection:')
+            self.qedit_fceo_gain = user_friendly_QLineEdit('1.0')
+            self.qedit_fceo_gain.returnPressed.connect(self.setfceoGain)
+            self.qedit_fceo_gain.setMaximumWidth(60)
             
         else:
             # Optical lock
@@ -938,7 +970,9 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
             
             grid2.addWidget(self.qedit_vco_gain[0],                         0, 1)
             grid2.addWidget(self.qlabel_detected_vco_gain[0],               1, 1)
-        
+            
+            grid.addWidget(self.qlabel_fceo_gain, 0,8)
+            grid.addWidget(self.qedit_fceo_gain, 1,8)
             
         else:
             # Optical lock: two outputs (DAC1 and DAC2)
@@ -951,7 +985,7 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
             grid2.addWidget(self.qedit_vco_gain[2],                         0, 2)
             # grid2.addWidget(self.qlabel_detected_vco_gain[2],               1, 2)
             grid.addWidget(self.qlabel_fopt_gain, 0,8)
-            grid.addWidget(self.qedit_fopt_gain, 0,9)
+            grid.addWidget(self.qedit_fopt_gain, 1,8)
         
         grid.addLayout(grid2, 0, 5, 2, 2)        
         grid.addWidget(self.qsign_positive,             0, 7)
@@ -1213,7 +1247,13 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
                 # self.q_dac_offset[k].blockSignals(False)
                 self.spectrum.setDacOffset(k, slider_units)
                 # print('done calling dac offset slider setValue()')
-        
+                
+                if k == 0:
+                    # Get fceo projection gain
+                    fceo_gain = float((self.sp.getValue('RP_settings', "fceo_gain")))
+                    self.qedit_fceo_gain.blockSignals(True)
+                    self.qedit_fceo_gain.setText('{:.4f}'.format(fceo_gain))
+                    self.qedit_fceo_gain.blockSignals(False)  
                 if k == 1:
                     # Get fopt projection gain
                     fopt_gain = float((self.sp.getValue('RP_settings', "fopt_gain")))
@@ -1255,6 +1295,7 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
             self.setVCOFreq_event()
             self.setVCOGain_event()
             self.chkLockClickedEvent()
+            self.setfceoGain()
             self.setfoptGain()
             if self.output_controls[0] == True:
                 self.setPWM0_event()

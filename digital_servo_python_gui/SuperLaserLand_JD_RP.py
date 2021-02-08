@@ -271,7 +271,8 @@ class SuperLaserLand_JD_RP:
 	# mux to select which signal goes in pll2 : the output of the DEMOD1, PLL1 or DEMOD2
 	BUS_ADDR_mux_pll2                                   = 0x9000
 
-	#Settings to set gain on fopt 
+	#Settings to set gain on fceo and fopt 
+	BUS_ADDR_fceo_gain                                  = 0x9018  
 	BUS_ADDR_fopt_gain                                  = 0x9020                                                              
 	BUS_ADDR_openLoopGain 								= [0x9010, 0x9011, 0x9012]
 
@@ -1793,7 +1794,26 @@ class SuperLaserLand_JD_RP:
 			print('set_mux_pll2')
 		self.mux_pll2 = register_value
 		self.send_bus_cmd_16bits(self.BUS_ADDR_mux_pll2, register_value)
-		
+
+	def set_fceo_gain(self, fceo_gain):
+		#Sets the gain to project fceo to some other frequency
+		if self.bVerbose == True:
+			print('set_internal_gain_for_fceo')
+		NDIVIDE = 16 #2**16 = 65536
+		fceo_gain_reg = int(round(fceo_gain*2**NDIVIDE))
+		if fceo_gain < 0:
+			fceo_gain_reg = 0b111111111111111111+fceo_gain_reg+1
+		self.send_bus_cmd_32bits(self.BUS_ADDR_fceo_gain, fceo_gain_reg)
+                                            
+
+	def get_fceo_gain(self):
+		if self.bVerbose == True:
+			print('get_internal_gain_for_fceo')
+		fceo_gain_reg = self.read_RAM_dpll_wrapper(self.BUS_ADDR_fceo_gain)
+		if fceo_gain_reg > ((1<<17)-1):
+			fceo_gain_reg = -(0b111111111111111111-fceo_gain_reg+1) 	#Because the value is consider as an signed integer
+		NDIVIDE = 16 #2**16 = 65536
+		return fceo_gain_reg/2**NDIVIDE
 	
 	def set_fopt_gain(self, fopt_gain):
 		#Sets the gain to project fopt at 192THz

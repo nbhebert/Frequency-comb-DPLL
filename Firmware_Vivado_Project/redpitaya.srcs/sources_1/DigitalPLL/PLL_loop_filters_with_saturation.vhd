@@ -104,7 +104,7 @@ architecture Behavioral of PLL_loop_filters_with_saturation is
 	signal p_railed_positive, p_railed_negative : std_logic := '0';
 	  -- Boxcar low-pass filter
     constant LOG2_MAXIMUM_SIZE_2047_PTS : integer := 11;
-    constant LOG2_FILTER_SIZE : integer := 8;
+    constant LOG2_FILTER_SIZE : integer := 2; --8;
     constant N_PTS : std_logic_vector(LOG2_MAXIMUM_SIZE_2047_PTS-1 downto 0) := std_logic_vector(to_unsigned(2**LOG2_FILTER_SIZE, LOG2_MAXIMUM_SIZE_2047_PTS));
     signal data_filt : std_logic_vector(data_in'length+LOG2_MAXIMUM_SIZE_2047_PTS-1 downto 0);
    

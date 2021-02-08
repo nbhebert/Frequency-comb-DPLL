@@ -415,17 +415,17 @@ class ConfigRPSettingsUI(Qt.QWidget):
 		if self.qradio_external_clk.isChecked():
 			# Valid VCO range is 600 MHz-1600 MHz according to DS181
 
-			# For 200 MHz external clock input, these settings should yield 125 MHz ADC clock, 1000 MHz VCO
-			f_ext          = 200e6
-			CLKFBOUT_MULT  = 5
+			# # For 200 MHz external clock input, these settings should yield 125 MHz ADC clock, 1000 MHz VCO
+			# f_ext          = 200e6
+			# CLKFBOUT_MULT  = 5
+			# CLKFBOUT_FRAC  = 0
+			# CLKOUT0_DIVIDE = 8
+
+			# For 20 MHz external clock input, these settings should yield 125 MHz ADC clock, 1000 MHz VCO
+			f_ext          = 20e6
+			CLKFBOUT_MULT  = 50
 			CLKFBOUT_FRAC  = 0
 			CLKOUT0_DIVIDE = 8
-
-			# # For 10 MHz external clock input, these settings should yield 124 MHz ADC clock, 620 MHz VCO
-			# f_ext          = 10e6
-			# CLKFBOUT_MULT  = 62
-			# CLKFBOUT_FRAC  = 0
-			# CLKOUT0_DIVIDE = 5
 
 			# # For 180 MHz external clock input, these settings should yield 125 MHz ADC clock, 1125 MHz VCO
 			# f_ext          = 180e6
