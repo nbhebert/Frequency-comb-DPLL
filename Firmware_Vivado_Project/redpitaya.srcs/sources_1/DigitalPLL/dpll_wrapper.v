@@ -604,17 +604,18 @@ DDC_wideband_filters DDC0_inst (
      // Output
     .amplitude(), 
     .wrapped_phase(wrapped_phase0), 
-    .inst_frequency(inst_frequency0_beforeProjection)
+    .inst_frequency(inst_frequency0)
     );
     
     
     //We can modify the measured CEO beat frequency noise to mimic the noise at a different wavelength (e.g.) 1560nm via a linear combination of fceo and foptical.
-    wire        [10-1:0]    inst_frequency0_beforeProjection;
-    wire        [18-1:0]    gain_scalefceo;
+    wire        [10-1:0]    inst_frequency0_projected_short;
+    wire        [10+10-1:0]    inst_frequency0_projected_wide;
+    wire        [10-1:0]    gain_scalefceo;
     
     //Register that holds the scaling factor
     parallel_bus_register_32bits_or_less # (
-        .REGISTER_SIZE(18),
+        .REGISTER_SIZE(10),
         .REGISTER_DEFAULT_VALUE(0),
         .ADDRESS(16'h9018)
     )
@@ -630,10 +631,11 @@ DDC_wideband_filters DDC0_inst (
     //Make a linear combination of fceo and fopt
     projectFreqNoise (                       
             .clk(clk1), 
-            .freqCEO(inst_frequency0_beforeProjection), 
-            .freqOptical(inst_frequency1_beforeProjection),
+            .freqCEO(inst_frequency0), 
+            .freqOptical(inst_frequency1),
             .scale_up(gain_scalefceo),
-            .freqOut(inst_frequency0)
+            .freqOut_wide(inst_frequency0_projected_wide),
+            .freqOut_scaleDown(inst_frequency0_projected_short)
             ); 
      
 ///////////////////////////////////////////////////////////////////////////////
@@ -794,16 +796,17 @@ multiplexer_3to1_async loop_filters_1_mux (
  .in0_mux                           (DDC1_output                ), 
  .in1_mux                           (inst_frequency0            ),
  .in2_mux                           (pll0_output >> 5           ), //pll0_output is 15 bits and in2_mux is 10 bits
- .out_mux                           (inst_frequency1_beforeProjection)
+ .out_mux                           (inst_frequency1            )
 );
 
 //We can modify the measured optical beat frequency noise to mimic the noise at a different wavelength (e.g.) 1560nm via a linear combination of fceo and foptical.
-wire        [10-1:0]    inst_frequency1_beforeProjection;
-wire        [18-1:0]    gain_scalefopt;
+wire        [10-1:0]    inst_frequency1_projected_short;
+wire        [10+10-1:0]    inst_frequency1_projected_wide;
+wire        [10-1:0]    gain_scalefopt;
 
 //Register that holds the scaling factor
 parallel_bus_register_32bits_or_less # (
-    .REGISTER_SIZE(18),
+    .REGISTER_SIZE(10),
     .REGISTER_DEFAULT_VALUE(0),
     .ADDRESS(16'h9020)
 )
@@ -819,10 +822,11 @@ parallel_bus_register_gain_scalefopt (
 //Make a linear combination of fceo and fopt
 projectFreqNoise (                       
         .clk(clk1), 
-        .freqCEO(inst_frequency0_beforeProjection), 
-        .freqOptical(inst_frequency1_beforeProjection),
+        .freqCEO(inst_frequency0), 
+        .freqOptical(inst_frequency1),
         .scale_up(gain_scalefopt),
-        .freqOut(inst_frequency1)
+        .freqOut_wide(inst_frequency1_projected_wide),
+        .freqOut_scaleDown(inst_frequency1_projected_short)
         ); 
      
 ///////////////////////////////////////////////////////////////////////////////
@@ -987,13 +991,15 @@ PLL_loop_filters_with_saturation # (
     .N_DIVIDE_I(24), 
     .N_DIVIDE_II(35),
     .N_DIVIDE_D(0),
-    .N_OUTPUT(16)
+    .N_OUTPUT(16),
+    .N_DIV_PROJ(10),
+    .N_EXTRA_PROJ(2)
 )
 PLL0_loop_filters (
     .clk(clk1), 
     .lock(pll0_lock), 
     .gain_changed(pll0_gain_changed), 
-    .data_in(inst_frequency0), 
+    .data_in(inst_frequency0_projected_wide), 
     .gain_p(pll0_gainp), 
     .gain_i(pll0_gaini), 
     .gain_ii(pll0_gainii),
@@ -1121,13 +1127,15 @@ PLL_loop_filters_with_saturation # (
     .N_DIVIDE_I(18),
     .N_DIVIDE_II(29),
     .N_DIVIDE_D(0),
-    .N_OUTPUT(16)
+    .N_OUTPUT(16),
+    .N_DIV_PROJ(10),
+    .N_EXTRA_PROJ(2)
 )
 PLL1_loop_filters (
     .clk(clk1), 
     .lock(pll1_lock), 
     .gain_changed(pll1_gain_changed), 
-    .data_in(inst_frequency1),              // TODO: Change this for inst_frequency2 when we finally add the second DDC core
+    .data_in(inst_frequency1_projected_wide),              // TODO: Change this for inst_frequency2 when we finally add the second DDC core
     .gain_p(pll1_gainp), 
     .gain_i(pll1_gaini), 
     .gain_ii(pll1_gainii),
@@ -1450,8 +1458,8 @@ system_identification_vna_with_dither_wrapper system_identification_vna_inst (
     // -- Data inputs from the output of the systems to be identified
     .data_in1(ADCraw0),
     .data_in2(ADCraw1), 
-    .data_in3({{6{inst_frequency0[9]}}, inst_frequency0}),  // the output of the DDC, sign-extended to 16 bits
-    .data_in4({{6{inst_frequency1[9]}}, inst_frequency1}),
+    .data_in3({{6{inst_frequency0_projected_short[9]}}, inst_frequency0_projected_short}),  // the output of the DDC, sign-extended to 16 bits
+    .data_in4({{6{inst_frequency1_projected_short[9]}}, inst_frequency1_projected_short}),
 
     // -- Modulation outputs to dacs
     .modulation_output_to_dac0(vna_output_to_dac0), 
@@ -1486,7 +1494,7 @@ dither_lockin_wrapper #
             // so we'll go for 3 Wires, or a total of 48 bits for each integrator.
 ) dither_lockin_wrapper0 (
     .clk                 (  clk1  ),
-    .data_input          (  inst_frequency0  ),
+    .data_input          (  inst_frequency0_projected_short  ),
 
     .cmd_trig            (  cmd_trig  ),
     .cmd_addr            (  cmd_addr  ),
@@ -1513,7 +1521,7 @@ dither_lockin_wrapper #
             // so we'll go for 3 Wires, or a total of 48 bits for each integrator.
 ) dither_lockin_wrapper1 (
     .clk                 (  clk1  ),
-    .data_input          (  inst_frequency1  ),
+    .data_input          (  inst_frequency1_projected_short  ),
 
     .cmd_trig            (  cmd_trig  ),
     .cmd_addr            (  cmd_addr  ),

@@ -1799,10 +1799,10 @@ class SuperLaserLand_JD_RP:
 		#Sets the gain to project fceo to some other frequency
 		if self.bVerbose == True:
 			print('set_internal_gain_for_fceo')
-		NDIVIDE = 16 #2**16 = 65536
+		NDIVIDE = 8 #2**8 = 256
 		fceo_gain_reg = int(round(fceo_gain*2**NDIVIDE))
 		if fceo_gain < 0:
-			fceo_gain_reg = 0b111111111111111111+fceo_gain_reg+1
+			fceo_gain_reg = 0b1111111111+fceo_gain_reg+1
 		self.send_bus_cmd_32bits(self.BUS_ADDR_fceo_gain, fceo_gain_reg)
                                             
 
@@ -1810,19 +1810,19 @@ class SuperLaserLand_JD_RP:
 		if self.bVerbose == True:
 			print('get_internal_gain_for_fceo')
 		fceo_gain_reg = self.read_RAM_dpll_wrapper(self.BUS_ADDR_fceo_gain)
-		if fceo_gain_reg > ((1<<17)-1):
-			fceo_gain_reg = -(0b111111111111111111-fceo_gain_reg+1) 	#Because the value is consider as an signed integer
-		NDIVIDE = 16 #2**16 = 65536
+		if fceo_gain_reg > ((1<<9)-1):
+			fceo_gain_reg = -(0b1111111111-fceo_gain_reg+1) 	#Because the value is consider as an signed integer
+		NDIVIDE = 8 #2**8 = 256
 		return fceo_gain_reg/2**NDIVIDE
 	
 	def set_fopt_gain(self, fopt_gain):
 		#Sets the gain to project fopt at 192THz
 		if self.bVerbose == True:
 			print('set_internal_gain_for_fopt')
-		NDIVIDE = 16 #2**16 = 65536
+		NDIVIDE = 8 #2**8 = 256
 		fopt_gain_reg = int(round(fopt_gain*2**NDIVIDE))
 		if fopt_gain < 0:
-			fopt_gain_reg = 0b111111111111111111+fopt_gain_reg+1
+			fopt_gain_reg = 0b1111111111+fopt_gain_reg+1
 		self.send_bus_cmd_32bits(self.BUS_ADDR_fopt_gain, fopt_gain_reg)
                                             
 
@@ -1830,9 +1830,9 @@ class SuperLaserLand_JD_RP:
 		if self.bVerbose == True:
 			print('get_internal_gain_for_fopt')
 		fopt_gain_reg = self.read_RAM_dpll_wrapper(self.BUS_ADDR_fopt_gain)
-		if fopt_gain_reg > ((1<<17)-1):
-			fopt_gain_reg = -(0b111111111111111111-fopt_gain_reg+1) 	#Because the value is consider as an signed integer
-		NDIVIDE = 16 #2**16 = 65536
+		if fopt_gain_reg > ((1<<9)-1):
+			fopt_gain_reg = -(0b1111111111-fopt_gain_reg+1) 	#Because the value is consider as an signed integer
+		NDIVIDE = 8 #2**8 = 256
 		return fopt_gain_reg/2**NDIVIDE
 
 		

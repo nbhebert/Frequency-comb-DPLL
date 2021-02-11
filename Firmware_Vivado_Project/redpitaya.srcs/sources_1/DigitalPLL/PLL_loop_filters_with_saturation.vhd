@@ -42,14 +42,16 @@ entity PLL_loop_filters_with_saturation is
 		N_DIVIDE_I 	: integer := 24;	-- 16 + log2(100e6/(2*pi*3e3)), where 100e6 is the sampling frequency and 3e3 is the nominal corner frequency of the PI
 		N_DIVIDE_II : integer := 35;
         N_DIVIDE_D  : integer := 32;
-		N_OUTPUT 	: integer := 16
+		N_OUTPUT 	: integer := 16;
+		N_DIV_PROJ  : integer := 10;
+		N_EXTRA_PROJ: integer := 2
 	
 	);
     Port (
 		clk             : in  std_logic;
 		lock            : in  std_logic;
 		gain_changed    : in  std_logic;
-		data_in         : in  std_logic_vector (9 downto 0);
+		data_in         : in  std_logic_vector (10+N_DIV_PROJ-1 downto 0);
 		gain_p          : in  std_logic_vector (31 downto 0);
 		gain_i          : in  std_logic_vector (31 downto 0);
 		gain_ii         : in  std_logic_vector (31 downto 0);
@@ -70,20 +72,20 @@ architecture Behavioral of PLL_loop_filters_with_saturation is
 	component pll_wide_mult
 	port (
 		clk  : in std_logic;
-		a    : in std_logic_vector(20 downto 0);
+		a    : in std_logic_vector(9+N_DIV_PROJ downto 0);
 		b    : in std_logic_vector(31 downto 0);
 		sclr : in std_logic;
-		p    : out std_logic_vector(52 downto 0));
+		p    : out std_logic_vector(41+N_DIV_PROJ downto 0));
 	end component;
 	
 	-- Multiplier, 32x32 input bits, 64 output bits, synchronous clear
 	component pll_32x32_mult_ii
 	port (
 		clk  : in std_logic;
-		a    : in std_logic_vector(31 downto 0);
+		a    : in std_logic_vector(31+N_DIV_PROJ downto 0);
 		b    : in std_logic_vector(31 downto 0);
 		sclr : in std_logic;
-		p    : out std_logic_vector(63 downto 0));
+		p    : out std_logic_vector(63+N_DIV_PROJ downto 0));
 	end component;
     
 --	-- Multiplier, 18x32 input bits, 64 output bits, synchronous clear
@@ -99,48 +101,48 @@ architecture Behavioral of PLL_loop_filters_with_saturation is
 	-- Internal variables
 	-----------------------------------------------------------------------
 	-- P branch signals
-	signal p_mult_output                        : std_logic_vector(52 downto 0) := (others => '0');
+	signal p_mult_output                        : std_logic_vector(41+N_DIV_PROJ downto 0) := (others => '0');
 	signal p_out                                : std_logic_vector(N_OUTPUT-1 downto 0) := (others => '0');
 	signal p_railed_positive, p_railed_negative : std_logic := '0';
-	  -- Boxcar low-pass filter
-    constant LOG2_MAXIMUM_SIZE_2047_PTS : integer := 11;
-    constant LOG2_FILTER_SIZE : integer := 2; --8;
-    constant N_PTS : std_logic_vector(LOG2_MAXIMUM_SIZE_2047_PTS-1 downto 0) := std_logic_vector(to_unsigned(2**LOG2_FILTER_SIZE, LOG2_MAXIMUM_SIZE_2047_PTS));
-    signal data_filt : std_logic_vector(data_in'length+LOG2_MAXIMUM_SIZE_2047_PTS-1 downto 0);
+--	  -- Boxcar low-pass filter
+--    constant LOG2_MAXIMUM_SIZE_2047_PTS : integer := 11;
+--    constant LOG2_FILTER_SIZE : integer := 0; --8;
+--    constant N_PTS : std_logic_vector(LOG2_MAXIMUM_SIZE_2047_PTS-1 downto 0) := std_logic_vector(to_unsigned(2**LOG2_FILTER_SIZE, LOG2_MAXIMUM_SIZE_2047_PTS));
+--    signal data_filt : std_logic_vector(data_in'length+LOG2_MAXIMUM_SIZE_2047_PTS-1 downto 0);
    
 	-- This accumulator integrates the frequency error to yield the phase error, and its result is used by both the I and the I^2 branch:
 	-- We arbitrarily decide on using 32 bits for the result (mostly because it fits well in the next 32x32 MULT)
 	-- The freq error has 10 fractional bits which means that there are 22 integer bits of phase error, or 2e6 * 2*pi radians of linear range.
-	constant N_BITS_PHASE_RESULT   : integer := 32;
+	constant N_BITS_PHASE_RESULT   : integer := 32+N_DIV_PROJ;
 	signal phase_error_accumulator : signed(N_BITS_PHASE_RESULT-1 downto 0) := (others => '0');
-	signal phase_error_accumulator_resized : std_logic_vector(32-1 downto 0) := (others => '0');
+	signal phase_error_accumulator_resized : std_logic_vector(32+N_DIV_PROJ-1 downto 0) := (others => '0');
 	-- the extra bit in these signals is to hold the full, unwrapped result
 	constant PHASE_ACCUM_MAX : signed(N_BITS_PHASE_RESULT+1-1 downto 0) := shift_left(to_signed(1, N_BITS_PHASE_RESULT+1), N_BITS_PHASE_RESULT-1)-1;	-- (2^(N_BITS_PHASE_RESULT-1)-1)
 	constant PHASE_ACCUM_MIN : signed(N_BITS_PHASE_RESULT+1-1 downto 0) := shift_left(to_signed(-1, N_BITS_PHASE_RESULT+1), N_BITS_PHASE_RESULT-1);	-- (-2**(N_BITS_PHASE_RESULT-1))
 	
 	-- I branch signals
-	signal i_mult_output                        : std_logic_vector(32+32-1 downto 0) := (others => '0');
+	signal i_mult_output                        : std_logic_vector(32+N_DIV_PROJ+32-1 downto 0) := (others => '0');
 	signal i_out                                : std_logic_vector(N_OUTPUT-1 downto 0) := (others => '0');
 	signal i_railed_positive, i_railed_negative : std_logic := '0';
 
 	-- II branch signals
-	signal ii_mult_output, ii_mult_output_reg                         : std_logic_vector(32+32-1 downto 0) := (others => '0');
+	signal ii_mult_output, ii_mult_output_reg                         : std_logic_vector(32+N_DIV_PROJ+32-1 downto 0) := (others => '0');
 	
 	signal second_stage_railed_positive, second_stage_railed_negative : std_logic := '0';
-	signal ii_accumulator                                             : std_logic_vector(N_OUTPUT+N_DIVIDE_II-1 downto 0) := (others => '0');
-	signal ii_accumulator_resized                                     : std_logic_vector(ii_accumulator'length-N_DIVIDE_II-1 downto 0) := (others => '0');
+	signal ii_accumulator                                             : std_logic_vector(N_OUTPUT+N_DIVIDE_II+N_DIV_PROJ-1 downto 0) := (others => '0');
+	signal ii_accumulator_resized                                     : std_logic_vector(ii_accumulator'length-N_DIVIDE_II-N_DIV_PROJ-1 downto 0) := (others => '0');
 	signal ii_out                                                     : std_logic_vector(N_OUTPUT-1 downto 0) := (others => '0');
 	signal ii_railed_positive, ii_railed_negative                     : std_logic := '0';
 	
     -- D branch signals
     -- signal data_in_dly : std_logic_vector(9 downto 0) := (others => '0');
-	signal data_diff        : std_logic_vector(32-1 downto 0)       := (others => '0');
-	signal d_mult_output    : std_logic_vector(64-1 downto 0)       := (others => '0');
+	signal data_diff        : std_logic_vector(32+N_DIV_PROJ-1 downto 0)       := (others => '0');
+	signal d_mult_output    : std_logic_vector(64+N_DIV_PROJ-1 downto 0)       := (others => '0');
 	signal d_out_unfiltered : std_logic_vector(N_OUTPUT-1 downto 0) := (others => '0');
 	signal d_out            : std_logic_vector(N_OUTPUT-1 downto 0) := (others => '0');
-	signal d_in_filt        : std_logic_vector(14-1 downto 0)       := (others => '0');
-	signal d_out_filt       : std_logic_vector(32-1 downto 0)       := (others => '0');
-	signal d_out_filt_dly   : std_logic_vector(32-1 downto 0)       := (others => '0');
+	signal d_in_filt        : std_logic_vector(14+N_DIV_PROJ-1 downto 0)       := (others => '0');
+	signal d_out_filt       : std_logic_vector(32+N_DIV_PROJ-1 downto 0)       := (others => '0');
+	signal d_out_filt_dly   : std_logic_vector(32+N_DIV_PROJ-1 downto 0)       := (others => '0');
     
 	signal d_railed_positive, d_railed_negative            : std_logic := '0';
 	
@@ -161,25 +163,25 @@ begin
 	
 	
 		
-	-- Boxcar low-pass filter
-    boxcar_filter_Pgain_inst : entity work.adjustable_boxcar_filter_v2
-    generic map (
-        LOG2_MAXIMUM_SIZE => LOG2_MAXIMUM_SIZE_2047_PTS,
-        DATA_WIDTH => data_in'length
-    ) port map (
-        rst => synchronous_clear,
-        clk => clk,
+--	-- Boxcar low-pass filter
+--    boxcar_filter_Pgain_inst : entity work.adjustable_boxcar_filter_v2
+--    generic map (
+--        LOG2_MAXIMUM_SIZE => LOG2_MAXIMUM_SIZE_2047_PTS,
+--        DATA_WIDTH => data_in'length
+--    ) port map (
+--        rst => synchronous_clear,
+--        clk => clk,
         
-        input_data => data_in,
-        filter_size => N_PTS,
-        output_data => data_filt
-    );
+--        input_data => data_in,
+--        filter_size => N_PTS,
+--        output_data => data_filt
+--    );
 	
 	
 	pll_wide_mult_p : pll_wide_mult
 	port map (
 		clk               => clk,
-		a                 => data_filt,
+		a                 => data_in,
 		b                 => gain_p,
 		sclr              => synchronous_clear,
 		p                 => p_mult_output
@@ -188,13 +190,13 @@ begin
 	-- Division by 2^N_DIVIDE_P and saturation for P branch, adds 1 cycle of delay:
 	p_saturation_inst: entity work.resize_with_saturation
 	GENERIC MAP (
-		N_INPUT           => p_mult_output'length-N_DIVIDE_P-LOG2_FILTER_SIZE,
+		N_INPUT           => p_mult_output'length-N_DIVIDE_P-N_DIV_PROJ,
 		N_OUTPUT          => p_out'length
 	)
 	PORT MAP (
 		clk               => clk,
 		synchronous_clear => synchronous_clear,
-		data_in           => p_mult_output(p_mult_output'length-1 downto N_DIVIDE_P+LOG2_FILTER_SIZE),
+		data_in           => p_mult_output(p_mult_output'length-1-N_EXTRA_PROJ downto N_DIVIDE_P+N_DIV_PROJ-N_EXTRA_PROJ),
 		railed_positive   => p_railed_positive,
 		railed_negative   => p_railed_negative,
 		data_out          => p_out
@@ -226,7 +228,7 @@ begin
 		end if;
 	end process;
 	-- for monitoring the lock state:
-	phase_residuals <= std_logic_vector(phase_error_accumulator);
+	phase_residuals <= std_logic_vector(resize(phase_error_accumulator,phase_residuals'length));
 	
 	
 
@@ -244,18 +246,18 @@ begin
 		p                 => i_mult_output
 	);
 
-	phase_error_accumulator_resized <= std_logic_vector(resize(phase_error_accumulator, 32)); -- the resize is only for the case where phase_error_accumulator is smaller than the 'a' operand, which occurs in simulation when we want to speed up the integrator overflow test.
+	phase_error_accumulator_resized <= std_logic_vector(resize(phase_error_accumulator, 32+N_DIV_PROJ)); -- the resize is only for the case where phase_error_accumulator is smaller than the 'a' operand, which occurs in simulation when we want to speed up the integrator overflow test.
 
 	-- Division by 2^N_DIVIDE_I and saturation for I branch, adds 1 cycle of delay:
 	i_saturation_inst: entity work.resize_with_saturation
 	GENERIC MAP (
-		N_INPUT           => i_mult_output'length-N_DIVIDE_I,
+		N_INPUT           => i_mult_output'length-N_DIVIDE_I-N_DIV_PROJ,
 		N_OUTPUT          => i_out'length
 	)
 	PORT MAP (
 		clk               => clk,
 		synchronous_clear => synchronous_clear,
-		data_in           => i_mult_output(i_mult_output'length-1 downto N_DIVIDE_I),
+		data_in           => i_mult_output(i_mult_output'length-1-N_EXTRA_PROJ downto N_DIVIDE_I+N_DIV_PROJ-N_EXTRA_PROJ),
 		railed_positive   => i_railed_positive,
 		railed_negative   => i_railed_negative,
 		data_out          => i_out
@@ -306,7 +308,7 @@ begin
 	-- Division by 2^N_DIVIDE_II and saturation for II branch, adds 1 cycle of delay:
 	ii_saturation_inst: entity work.resize_with_saturation
 	GENERIC MAP (
-		N_INPUT               => ii_accumulator'length-N_DIVIDE_II,
+		N_INPUT               => ii_accumulator'length-N_DIVIDE_II-N_DIV_PROJ,
 		N_OUTPUT              => ii_out'length
 	)
 	PORT MAP (
@@ -318,7 +320,7 @@ begin
 			data_out          => ii_out
 	);
 
-	ii_accumulator_resized <= ii_accumulator(ii_accumulator'length-1 downto N_DIVIDE_II);
+	ii_accumulator_resized <= ii_accumulator(ii_accumulator'length-1-N_EXTRA_PROJ downto N_DIVIDE_II+N_DIV_PROJ-N_EXTRA_PROJ);
 
 	-- Differentiator with filter branch
 	----------------------------------------------------------------
@@ -361,13 +363,13 @@ begin
 	-- Division by 2^N_DIVIDE_D and saturation for D branch, adds 1 cycle of delay:
     d_saturation_inst: entity work.resize_with_saturation
     GENERIC MAP (
-        N_INPUT  => d_mult_output'length-N_DIVIDE_D-18-3,
+        N_INPUT  => d_mult_output'length-N_DIVIDE_D-18-3-N_DIV_PROJ,
         N_OUTPUT => d_out'length
     )
     PORT MAP (
         clk => clk,
         synchronous_clear => synchronous_clear,
-        data_in           => d_mult_output(d_mult_output'length-1 downto N_DIVIDE_D+18+3),
+        data_in           => d_mult_output(d_mult_output'length-1-N_EXTRA_PROJ downto N_DIVIDE_D+18+3+N_DIV_PROJ-N_EXTRA_PROJ),
         railed_positive   => d_railed_positive,
         railed_negative   => d_railed_negative,
         data_out          => d_out

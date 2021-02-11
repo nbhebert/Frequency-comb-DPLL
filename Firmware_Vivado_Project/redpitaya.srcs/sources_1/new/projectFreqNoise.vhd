@@ -33,10 +33,11 @@ use ieee.numeric_std.all;
 
 entity projectFreqNoise is
     Port ( clk : in STD_LOGIC;
-           freqCEO     : in STD_LOGIC_VECTOR (9 downto 0);
-           freqOptical : in STD_LOGIC_VECTOR (9 downto 0);
-           scale_up     : in STD_LOGIC_VECTOR (18-1 downto 0);
-           freqOut     : out STD_LOGIC_VECTOR (9 downto 0));
+           freqCEO     : in STD_LOGIC_VECTOR (10-1 downto 0);
+           freqOptical : in STD_LOGIC_VECTOR (10-1 downto 0);
+           scale_up     : in STD_LOGIC_VECTOR (10-1 downto 0);
+           freqOut_wide      : out STD_LOGIC_VECTOR (10+10-1 downto 0);
+           freqOut_scaleDown     : out STD_LOGIC_VECTOR (10-1 downto 0));
 end projectFreqNoise;
 
 architecture Behavioral of projectFreqNoise is
@@ -44,7 +45,7 @@ architecture Behavioral of projectFreqNoise is
 constant NDATA : integer := freqCEO'length;
 constant NSCALE : integer := scale_up'length;
 
-constant bit_shift_scale_down : integer := 16;--2**16 = 65536
+constant bit_shift_scale_down : integer := 8;--2**8 = 256
 signal freqSum_scaleUp : signed(NDATA+NSCALE-1 downto 0) := (others => '0');
 
 
@@ -56,8 +57,9 @@ begin
         if rising_edge(clk) then
             --Scale the CEO freq noise (by factor 1-nu2/nu1), scale the optical freq noise (by factor nu2/nu1), and sum together
             freqSum_scaleUp <= signed(freqOptical)*signed(scale_up) + signed(freqCEO)*(to_signed(2**bit_shift_scale_down,scale_up'length)-signed(scale_up));
+            freqOut_wide <= std_logic_vector(freqSum_scaleUp);
             -- Scale down the result. When dividing by 2**bit_shift_scale_down, we add 1/2 LSB to perform round instead of floor.
-            freqOut <= std_logic_vector(resize(shift_right(freqSum_scaleUp + to_signed(2**(bit_shift_scale_down-1),freqSum_scaleUp'length),bit_shift_scale_down),freqOut'length));
+            freqOut_scaleDown <= std_logic_vector(resize(shift_right(freqSum_scaleUp + to_signed(2**(bit_shift_scale_down-1),freqSum_scaleUp'length),bit_shift_scale_down),freqOut_scaleDown'length));
         end if;
     end process;
 
