@@ -88,6 +88,7 @@ class SuperLaserLand_JD_RP:
 	xadc_base_addr    = 0x0001_0000
 	clkw_base_addr    = 0x0002_0000
 	clk_sel_base_addr = 0x0003_0000
+	clk_div_base_addr = 0x0003_0008
 	clk_freq_reg1     = 0x0004_0000
 	clk_freq_reg2     = 0x0004_0008
 	clk_freq_reg3     = 0x0005_0000
@@ -169,8 +170,9 @@ class SuperLaserLand_JD_RP:
 	
 	BUS_ADDR_TEST_OSC                                   = 0x0046
 	BUS_ADDR_TEST_OSC_DUTY                              = 0x0048
-	# clock select register. 0 = internal, 1 = external
-	BUS_ADDR_CLK_SEL                                    = 0x0049
+    
+	# Power comb select register. 0 = On, 1 = Off
+	BUS_ADDR_POW_COMB                                   = 0x0049
 
 	# Addresses for the system identification VNA:
 	BUS_ADDR_number_of_cycles_integration               = 0x5000
@@ -1835,7 +1837,16 @@ class SuperLaserLand_JD_RP:
 		NDIVIDE = 8 #2**8 = 256
 		return fopt_gain_reg/2**NDIVIDE
 
-		
+	def PowerOn(self):
+		self.send_bus_cmd_32bits(self.BUS_ADDR_POW_COMB, 0)     #0 = Pump driver's enable pin Low = Comb Enabled
+        
+	def PowerOff(self):
+		self.send_bus_cmd_32bits(self.BUS_ADDR_POW_COMB, 1)     #1 = Pump driver's enable pin High = Comb Disabled
+        
+	def getPower(self):
+		status = self.read_RAM_dpll_wrapper(self.BUS_ADDR_POW_COMB)
+		return status
+        
 	# scales the offset of the output tone produced by the VCO right before the ADC.
 	# offset = [-1 to 1]
 	def set_internal_VCO_offset(self, offset):
@@ -1997,7 +2008,7 @@ class SuperLaserLand_JD_RP:
 	# f_source is the frequency of the selected clock source (200 MHz in internal clock mode, can be whatever is connected to GPIO_P[5] in external clock mode)
 	def setADCclockPLL(self, f_source, bExternalClock, CLKFBOUT_MULT, CLKFBOUT_FRAC, CLKOUT0_DIVIDE):
 		DIVCLK_DIVIDE = 1
-		VCO_freq = f_source * CLKFBOUT_MULT/DIVCLK_DIVIDE
+		VCO_freq = f_source * (CLKFBOUT_MULT+CLKFBOUT_FRAC/1000)/DIVCLK_DIVIDE
 		print('VCO_freq = %f MHz, valid range is 600-1600 MHz according to the datasheet (DS181)' % (VCO_freq/1e6))
 
 		# From PG065:
@@ -2011,6 +2022,8 @@ class SuperLaserLand_JD_RP:
 		reg  = (DIVCLK_DIVIDE & ((1<<8)-1)) << 0
 		reg |= (CLKFBOUT_MULT & ((1<<8)-1)) << 8
 		reg |= (CLKFBOUT_FRAC & ((1<<16)-1)) << 16
+		if CLKFBOUT_FRAC != 0:
+			reg |= (1 & ((1<<26)-1)) << 26  #Enable fractional multiplier on bit 26
 		self.dev.write_Zynq_AXI_register_uint32(self.clkw_base_addr + 0x200, reg)
 		# Clock configuration register 2 (table 4-2 in PG065)
 		reg = (CLKOUT0_DIVIDE & ((1<<8)-1)) << 0
@@ -2031,7 +2044,12 @@ class SuperLaserLand_JD_RP:
 		self.dev.write_Zynq_AXI_register_uint32(self.clkw_base_addr + 0x25C, 0x7)
 		self.dev.write_Zynq_AXI_register_uint32(self.clkw_base_addr + 0x25C, 0x2) # this needs to happen before the locked status goes high according to the datasheet.  Not sure what the impact is if we don't honor this requirement
 
-		self.fs = f_source * CLKFBOUT_MULT/CLKOUT0_DIVIDE
+		#Set clock divider (counter) for 10 MHz output
+		prescaler_divide = int(round(f_source/10e6/2)) # /2 because we want the number of fast clock cycles that we need to count before toggling the slow clock
+		reg_prescaler_divide  = (prescaler_divide & ((1<<5)-1)) << 0
+		self.dev.write_Zynq_AXI_register_uint32(self.clk_div_base_addr,reg_prescaler_divide)
+
+		self.fs = f_source * (CLKFBOUT_MULT+CLKFBOUT_FRAC/1000)/CLKOUT0_DIVIDE
 		time.sleep(0.1)
 		reg_clk_sel_and_reset = int(not bExternalClock) | (0<<1) # de-assert reset on the incoming ADC clock
 		self.dev.write_Zynq_AXI_register_uint32(self.clk_sel_base_addr, reg_clk_sel_and_reset) # assert reset on the incoming ADC clock 

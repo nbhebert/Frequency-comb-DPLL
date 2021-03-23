@@ -18,7 +18,7 @@ module dpll_wrapper(
     output wire signed [15:0] DACout2,
 
     output wire osc_output,
-    output wire clk_ext_or_int, // clock select register. 1 = internal, 0 = external
+    output wire power_comb, // ability to send an enable signal to the pump drivers
 
     // Data logger port:
     output wire [16-1:0]      LoggerData,
@@ -160,15 +160,15 @@ parallel_bus_register_oscillator_duty (
 
 parallel_bus_register_32bits_or_less # (
     .REGISTER_SIZE(1),
-    .REGISTER_DEFAULT_VALUE(1'b1), // internal clock mode by default
+    .REGISTER_DEFAULT_VALUE(1'b1), // comb is off by default. the GPIO pin will output 3.3V, which disables the LDTC1020
     .ADDRESS(16'h0049)
 )
-parallel_bus_register_clk_select (
+parallel_bus_register_power_comb (
      .clk(clk1), 
      .bus_strobe(cmd_trig), 
      .bus_address(cmd_addr), 
      .bus_data({cmd_data2in, cmd_data1in}), 
-     .register_output(clk_ext_or_int), 
+     .register_output(power_comb), 
      .update_flag()
      );
 

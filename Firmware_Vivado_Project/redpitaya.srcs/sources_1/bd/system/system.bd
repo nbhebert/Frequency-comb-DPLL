@@ -939,53 +939,6 @@
         </spirit:parameters>
       </spirit:busInterface>
       <spirit:busInterface>
-        <spirit:name>CLK.FCLK_CLK0</spirit:name>
-        <spirit:displayName>Clk</spirit:displayName>
-        <spirit:description>Clock</spirit:description>
-        <spirit:busType spirit:library="signal" spirit:name="clock" spirit:vendor="xilinx.com" spirit:version="1.0"/>
-        <spirit:abstractionType spirit:library="signal" spirit:name="clock_rtl" spirit:vendor="xilinx.com" spirit:version="1.0"/>
-        <spirit:slave/>
-        <spirit:portMaps>
-          <spirit:portMap>
-            <spirit:logicalPort>
-              <spirit:name>CLK</spirit:name>
-            </spirit:logicalPort>
-            <spirit:physicalPort>
-              <spirit:name>FCLK_CLK0</spirit:name>
-            </spirit:physicalPort>
-          </spirit:portMap>
-        </spirit:portMaps>
-        <spirit:parameters>
-          <spirit:parameter>
-            <spirit:name>FREQ_HZ</spirit:name>
-            <spirit:value>125000000</spirit:value>
-            <spirit:vendorExtensions>
-              <bd:configElementInfos>
-                <bd:configElementInfo bd:valueSource="user_prop"/>
-              </bd:configElementInfos>
-            </spirit:vendorExtensions>
-          </spirit:parameter>
-          <spirit:parameter>
-            <spirit:name>PHASE</spirit:name>
-            <spirit:value>0.000</spirit:value>
-            <spirit:vendorExtensions>
-              <bd:configElementInfos>
-                <bd:configElementInfo bd:valueSource="default"/>
-              </bd:configElementInfos>
-            </spirit:vendorExtensions>
-          </spirit:parameter>
-          <spirit:parameter>
-            <spirit:name>CLK_DOMAIN</spirit:name>
-            <spirit:value>system_processing_system7_0_FCLK_CLK0</spirit:value>
-            <spirit:vendorExtensions>
-              <bd:configElementInfos>
-                <bd:configElementInfo bd:valueSource="default_prop"/>
-              </bd:configElementInfos>
-            </spirit:vendorExtensions>
-          </spirit:parameter>
-        </spirit:parameters>
-      </spirit:busInterface>
-      <spirit:busInterface>
         <spirit:name>CLK.FCLK_CLK1</spirit:name>
         <spirit:displayName>Clk</spirit:displayName>
         <spirit:description>Clock</spirit:description>
@@ -1525,6 +1478,53 @@
         </spirit:parameters>
       </spirit:busInterface>
       <spirit:busInterface>
+        <spirit:name>CLK.FCLK_CLK0</spirit:name>
+        <spirit:displayName>Clk</spirit:displayName>
+        <spirit:description>Clock</spirit:description>
+        <spirit:busType spirit:library="signal" spirit:name="clock" spirit:vendor="xilinx.com" spirit:version="1.0"/>
+        <spirit:abstractionType spirit:library="signal" spirit:name="clock_rtl" spirit:vendor="xilinx.com" spirit:version="1.0"/>
+        <spirit:slave/>
+        <spirit:portMaps>
+          <spirit:portMap>
+            <spirit:logicalPort>
+              <spirit:name>CLK</spirit:name>
+            </spirit:logicalPort>
+            <spirit:physicalPort>
+              <spirit:name>FCLK_CLK0</spirit:name>
+            </spirit:physicalPort>
+          </spirit:portMap>
+        </spirit:portMaps>
+        <spirit:parameters>
+          <spirit:parameter>
+            <spirit:name>FREQ_HZ</spirit:name>
+            <spirit:value>125000000</spirit:value>
+            <spirit:vendorExtensions>
+              <bd:configElementInfos>
+                <bd:configElementInfo bd:valueSource="user_prop"/>
+              </bd:configElementInfos>
+            </spirit:vendorExtensions>
+          </spirit:parameter>
+          <spirit:parameter>
+            <spirit:name>PHASE</spirit:name>
+            <spirit:value>0.000</spirit:value>
+            <spirit:vendorExtensions>
+              <bd:configElementInfos>
+                <bd:configElementInfo bd:valueSource="default"/>
+              </bd:configElementInfos>
+            </spirit:vendorExtensions>
+          </spirit:parameter>
+          <spirit:parameter>
+            <spirit:name>CLK_DOMAIN</spirit:name>
+            <spirit:value>system_processing_system7_0_FCLK_CLK0</spirit:value>
+            <spirit:vendorExtensions>
+              <bd:configElementInfos>
+                <bd:configElementInfo bd:valueSource="default_prop"/>
+              </bd:configElementInfos>
+            </spirit:vendorExtensions>
+          </spirit:parameter>
+        </spirit:parameters>
+      </spirit:busInterface>
+      <spirit:busInterface>
         <spirit:name>DATA.REG_TO_AXI2</spirit:name>
         <spirit:displayName>Data</spirit:displayName>
         <spirit:description>Data</spirit:description>
@@ -1596,12 +1596,6 @@
           <spirit:name>M_AXI_GP0_ACLK</spirit:name>
           <spirit:wire>
             <spirit:direction>in</spirit:direction>
-          </spirit:wire>
-        </spirit:port>
-        <spirit:port>
-          <spirit:name>FCLK_CLK0</spirit:name>
-          <spirit:wire>
-            <spirit:direction>out</spirit:direction>
           </spirit:wire>
         </spirit:port>
         <spirit:port>
@@ -1701,6 +1695,12 @@
           </spirit:wire>
         </spirit:port>
         <spirit:port>
+          <spirit:name>FCLK_CLK0</spirit:name>
+          <spirit:wire>
+            <spirit:direction>out</spirit:direction>
+          </spirit:wire>
+        </spirit:port>
+        <spirit:port>
           <spirit:name>reg_to_axi2</spirit:name>
           <spirit:wire>
             <spirit:direction>in</spirit:direction>
@@ -1716,6 +1716,16 @@
             <spirit:direction>in</spirit:direction>
             <spirit:vector>
               <spirit:left>31</spirit:left>
+              <spirit:right>0</spirit:right>
+            </spirit:vector>
+          </spirit:wire>
+        </spirit:port>
+        <spirit:port>
+          <spirit:name>prescaler_divide</spirit:name>
+          <spirit:wire>
+            <spirit:direction>out</spirit:direction>
+            <spirit:vector>
+              <spirit:left>4</spirit:left>
               <spirit:right>0</spirit:right>
             </spirit:vector>
           </spirit:wire>
@@ -1957,8 +1967,12 @@
         <spirit:configurableElementValues>
           <spirit:configurableElementValue spirit:referenceId="bd:xciName">system_axi_gpio_0_0</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="C_GPIO_WIDTH">2</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="C_GPIO2_WIDTH">5</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="C_IS_DUAL">1</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="C_DOUT_DEFAULT_2">0x00000001</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="C_DOUT_DEFAULT">0x00000001</spirit:configurableElementValue>
           <spirit:configurableElementValue spirit:referenceId="C_ALL_OUTPUTS">1</spirit:configurableElementValue>
+          <spirit:configurableElementValue spirit:referenceId="C_ALL_OUTPUTS_2">1</spirit:configurableElementValue>
         </spirit:configurableElementValues>
       </spirit:componentInstance>
       <spirit:componentInstance>
@@ -2192,6 +2206,11 @@
         <spirit:name>reg_to_axi3_1</spirit:name>
         <spirit:externalPortReference spirit:portRef="reg_to_axi3"/>
         <spirit:internalPortReference spirit:componentRef="axi_gpio_freq2" spirit:portRef="gpio_io_i"/>
+      </spirit:adHocConnection>
+      <spirit:adHocConnection>
+        <spirit:name>axi_gpio_clk_sel_gpio2_io_o</spirit:name>
+        <spirit:internalPortReference spirit:componentRef="axi_gpio_clk_sel" spirit:portRef="gpio2_io_o"/>
+        <spirit:externalPortReference spirit:portRef="prescaler_divide"/>
       </spirit:adHocConnection>
     </spirit:adHocConnections>
     <spirit:hierConnections>

@@ -1,7 +1,7 @@
 //Copyright 1986-2015 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2015.4 (win64) Build 1412921 Wed Nov 18 09:43:45 MST 2015
-//Date        : Wed Jan 20 13:49:22 2021
+//Date        : Tue Mar 16 20:15:10 2021
 //Host        : DESKTOP-U5R5N50 running 64-bit major release  (build 9200)
 //Command     : generate_target system_wrapper.bd
 //Design      : system_wrapper
@@ -170,6 +170,7 @@ module system_wrapper
     clk_ext_in,
     clk_to_adc,
     gpio_io_o,
+    prescaler_divide,
     reg_to_axi1,
     reg_to_axi2,
     reg_to_axi3);
@@ -333,6 +334,7 @@ module system_wrapper
   input clk_ext_in;
   output clk_to_adc;
   output [1:0]gpio_io_o;
+  output [4:0]prescaler_divide;
   input [31:0]reg_to_axi1;
   input [31:0]reg_to_axi2;
   input [31:0]reg_to_axi3;
@@ -497,6 +499,7 @@ module system_wrapper
   wire clk_ext_in;
   wire clk_to_adc;
   wire [1:0]gpio_io_o;
+  wire [4:0]prescaler_divide;
   wire [31:0]reg_to_axi1;
   wire [31:0]reg_to_axi2;
   wire [31:0]reg_to_axi3;
@@ -662,6 +665,7 @@ module system_wrapper
         .clk_ext_in(clk_ext_in),
         .clk_to_adc(clk_to_adc),
         .gpio_io_o(gpio_io_o),
+        .prescaler_divide(prescaler_divide),
         .reg_to_axi1(reg_to_axi1),
         .reg_to_axi2(reg_to_axi2),
         .reg_to_axi3(reg_to_axi3));

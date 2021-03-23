@@ -154,6 +154,7 @@ wire ack_timout_t;
 wire ack_combine_t;
 
 wire [1:0] gpio_io_o;
+wire [4:0] prescaler_divide;
 wire ps_gpio_rst;
 wire clk_int_or_ext;
 
@@ -226,7 +227,7 @@ red_pitaya_ps i_ps (
   .clk_ext_bufg(clk_ext_bufg), // copy of the exp_p_in[5] signal, after a BUFG
   .clk_to_adc(clk_to_adc),
   .gpio_io_o(gpio_io_o),
-
+  .prescaler_divide(prescaler_divide),
   .reg_to_axi1(reg_to_axi1),
   .reg_to_axi2(reg_to_axi2),
   .reg_to_axi3(reg_to_axi3)
@@ -480,7 +481,7 @@ wire LoggerIsWriting;
 reg dpll_output_selector;
 
 wire osc_output;  // for testing a switching regulator
-
+wire power_comb;
 wire [ 32-1:0] dpll_output;
 wire dpll_ack;
 wire [ 32-1:0] addr_packed_output;
@@ -521,7 +522,7 @@ dpll_wrapper dpll_wrapper_inst (
   .DACout2                 (  DACout2                    ),
 
   .osc_output(osc_output),
-  //.clk_ext_or_int(clk_ext_or_int), // clock select register. 1 = internal, 0 = external
+  .power_comb(power_comb), // power comb select register. 1 = off, 0 = on
 
   // Data logger port:
   .LoggerData              (  LoggerData                 ),
@@ -802,13 +803,27 @@ assign exp_n_dir[8-1:0] = {8'b00111111};  // pins 0-5 set as outputs, the rest a
 assign exp_p_dir[8-1:0] = {8'b00001001};  // pin 0 and 3 set as output, the rest as inputs
 
 assign exp_n_out[2] = osc_output;
-assign exp_n_out[5] = 1'b0;   // unused GPIO set as output with 0V for the moment
+assign exp_n_out[5] = power_comb;   // GPIO pin used to turn the comb on or off. Off = 1 (3.3V), On = 0 (0V)
 assign exp_n_out[3] = 1'b0;   // unused GPIO set as output with 0V for the moment
 // assign exp_n_out[5] = exp_p_in[5];  // loopback from buffered input to output
 //assign exp_p_out[3] = exp_p_in[2];  // loopback from buffered input to output
 
-// // 125 MHz generated from 200 MHz, either internal or external clocks
-ODDR oddr_exp_p_out3 ( .Q(exp_p_out[3]), .D1(1'b1), .D2(1'b0), .C(clk_to_adc), .CE(1'b1), .R(1'b0), .S(1'b0));
+// // 10 MHz generated from either internal or external clocks
+wire clk_10MHz;
+wire clk_10MHz_bufg;
+
+
+scale_clock scale_clock_inst (
+  .clk_in                  ( (clk_int_or_ext == 1'b1) ? fclk[3] : exp_p_in[5] ),   //internal clock at 200MHz or external clock on pin exp_p_in[5]
+  .division_factor         ( prescaler_divide                                 ),   //number of fast clock cycles that we need to count before toggling the slow clock
+  .clk_10MHz               ( clk_10MHz                                        )
+);
+
+
+BUFR bufg_clk_10MHz    (.O (clk_10MHz_bufg   ), .I (clk_10MHz   ));
+
+
+ODDR oddr_exp_p_out3 ( .Q(exp_p_out[3]), .D1(1'b1), .D2(1'b0), .C(clk_10MHz_bufg), .CE(1'b1), .R(1'b0), .S(1'b0));
 
 // Use this to map the digital IO to the house keeping module:
 // IOBUF i_iobufp [8-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_out_hk), .T(~exp_p_dir) );

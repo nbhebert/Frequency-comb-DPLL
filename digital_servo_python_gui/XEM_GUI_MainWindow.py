@@ -184,6 +184,15 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
             self.qedit_fceo_gain.blockSignals(True)
             self.qedit_fceo_gain.setText('{:.4f}'.format(fceo_gain))
             self.qedit_fceo_gain.blockSignals(False) 
+            #Get the status of the comb (power on/off)
+            status = self.sl.getPower()
+            if status == 0: #Power on
+                self.qchk_powercomb.setStyleSheet('font-size: 18pt; color: white; background-color: green')
+                self.qchk_powercomb.setChecked(True)
+            elif status == 1:   #Power off
+                self.qchk_powercomb.setStyleSheet('font-size: 18pt; color: white; background-color: red')
+                self.qchk_powercomb.setChecked(False)
+            
         if self.selected_ADC == 1:
             #get value for the fopt gain
             fopt_gain = self.sl.get_fopt_gain()
@@ -203,6 +212,7 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
         self.setVCOGain_event()
         if self.selected_ADC == 0:
             self.setfceoGain()
+            self.chkPowerCombClickedEvent()
         if self.selected_ADC == 1:
             self.setfoptGain()
         self.chkLockClickedEvent()
@@ -771,7 +781,21 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
 
         self.bFirstTimeLockCheckBoxClicked = False
 
+
+    def chkPowerCombClickedEvent(self):
+        bEnable = self.qchk_powercomb.isChecked()
+        if bEnable:
+            self.logger.info('Red_Pitaya_GUI{}: Comb Enabled'.format(self.logger_name))
+            self.qchk_powercomb.setStyleSheet('font-size: 18pt; color: white; background-color: green')    
+            self.sl.PowerOn()
+        else:                  
+            self.logger.info('Red_Pitaya_GUI{}: Comb Disabled'.format(self.logger_name))
+            self.qchk_powercomb.setStyleSheet('font-size: 18pt; color: white; background-color: red')
+            self.sl.PowerOff()
             
+
+
+
     def initUI(self):
         
 #        second_half_offset = 50
@@ -832,6 +856,13 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
             self.qedit_fceo_gain = user_friendly_QLineEdit('1.0')
             self.qedit_fceo_gain.returnPressed.connect(self.setfceoGain)
             self.qedit_fceo_gain.setMaximumWidth(60)
+            
+            # Main button for turning the comb on/off:
+            self.qchk_powercomb = Qt.QCheckBox('Power on/off')
+            self.qchk_powercomb.setStyleSheet('')
+            self.qchk_powercomb.setStyleSheet('font-size: 18pt; color: white; background-color: red')
+            self.qchk_powercomb.clicked.connect(self.chkPowerCombClickedEvent)
+            self.qchk_powercomb.setChecked(False)
             
         else:
             # Optical lock
@@ -973,7 +1004,7 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
             
             grid.addWidget(self.qlabel_fceo_gain, 0,8)
             grid.addWidget(self.qedit_fceo_gain, 1,8)
-            
+            grid.addWidget(self.qchk_powercomb, 0,9)
         else:
             # Optical lock: two outputs (DAC1 and DAC2)
             grid2.addWidget(self.qlabel_vco_gain,                           0, 0)
@@ -992,7 +1023,7 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
         grid.addWidget(self.qsign_negative,             1, 7)
 
         
-        grid.addWidget(Qt.QLabel(),                     0, 9, 1, 1)
+        #grid.addWidget(Qt.QLabel(),                     0, 9, 1, 1)
         grid.setColumnStretch(9, 1)
         
         self.qgroupbox_settings.setLayout(grid)    
@@ -1295,6 +1326,7 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
             self.setVCOFreq_event()
             self.setVCOGain_event()
             self.chkLockClickedEvent()
+            self.chkPowerCombClickedEvent()
             self.setfceoGain()
             self.setfoptGain()
             if self.output_controls[0] == True:
