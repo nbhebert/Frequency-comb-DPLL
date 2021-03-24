@@ -101,7 +101,7 @@ module red_pitaya_ps (
   input  wire          clk_ext_in,
   output wire          clk_to_adc,
   output wire    [1:0] gpio_io_o,
-  output wire    [4:0] prescaler_divide,
+  output wire          clk_10MHzOut,
   // for counting the external clk's frequency:
   output wire          clk_ext_bufg,
   input  wire [32-1:0] reg_to_axi1,
@@ -492,7 +492,7 @@ system_wrapper system_i (
   .clk_ext_in(clk_ext_in),
   .clk_to_adc(clk_to_adc),
   .gpio_io_o(gpio_io_o),
-  .prescaler_divide(prescaler_divide),
+  .clk_10MHzOut(clk_10MHzOut),
   .clk_ext_bufg(clk_ext_bufg),
   .reg_to_axi1(reg_to_axi1),
   .reg_to_axi2(reg_to_axi2),

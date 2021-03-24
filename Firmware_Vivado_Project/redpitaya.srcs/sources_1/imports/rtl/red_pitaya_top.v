@@ -154,7 +154,6 @@ wire ack_timout_t;
 wire ack_combine_t;
 
 wire [1:0] gpio_io_o;
-wire [4:0] prescaler_divide;
 wire ps_gpio_rst;
 wire clk_int_or_ext;
 
@@ -227,7 +226,7 @@ red_pitaya_ps i_ps (
   .clk_ext_bufg(clk_ext_bufg), // copy of the exp_p_in[5] signal, after a BUFG
   .clk_to_adc(clk_to_adc),
   .gpio_io_o(gpio_io_o),
-  .prescaler_divide(prescaler_divide),
+  .clk_10MHzOut(clk_10MHzOut),
   .reg_to_axi1(reg_to_axi1),
   .reg_to_axi2(reg_to_axi2),
   .reg_to_axi3(reg_to_axi3)
@@ -753,6 +752,9 @@ wire  [ 8-1: 0] led_o_hk;
 
 wire            digital_loop_hk;
 
+wire            clk_10MHzOut;
+wire            clk_10MHz_bufg;
+
 red_pitaya_hk i_hk (
   // system signals
   .clk_i           (  adc_clk                    ),  // clock
@@ -808,20 +810,9 @@ assign exp_n_out[3] = 1'b0;   // unused GPIO set as output with 0V for the momen
 // assign exp_n_out[5] = exp_p_in[5];  // loopback from buffered input to output
 //assign exp_p_out[3] = exp_p_in[2];  // loopback from buffered input to output
 
-// // 10 MHz generated from either internal or external clocks
-wire clk_10MHz;
-wire clk_10MHz_bufg;
 
 
-scale_clock scale_clock_inst (
-  .clk_in                  ( (clk_int_or_ext == 1'b1) ? fclk[3] : exp_p_in[5] ),   //internal clock at 200MHz or external clock on pin exp_p_in[5]
-  .division_factor         ( prescaler_divide                                 ),   //number of fast clock cycles that we need to count before toggling the slow clock
-  .clk_10MHz               ( clk_10MHz                                        )
-);
-
-
-BUFR bufg_clk_10MHz    (.O (clk_10MHz_bufg   ), .I (clk_10MHz   ));
-
+BUFR bufg_clk_10MHz    (.O (clk_10MHz_bufg   ), .I (clk_10MHzOut   ));
 
 ODDR oddr_exp_p_out3 ( .Q(exp_p_out[3]), .D1(1'b1), .D2(1'b0), .C(clk_10MHz_bufg), .CE(1'b1), .R(1'b0), .S(1'b0));
 

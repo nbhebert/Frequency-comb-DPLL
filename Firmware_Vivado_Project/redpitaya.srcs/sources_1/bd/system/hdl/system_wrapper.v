@@ -1,7 +1,7 @@
 //Copyright 1986-2015 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2015.4 (win64) Build 1412921 Wed Nov 18 09:43:45 MST 2015
-//Date        : Tue Mar 16 20:15:10 2021
+//Date        : Wed Mar 24 10:55:47 2021
 //Host        : DESKTOP-U5R5N50 running 64-bit major release  (build 9200)
 //Command     : generate_target system_wrapper.bd
 //Design      : system_wrapper
@@ -166,11 +166,11 @@ module system_wrapper
     Vaux9_v_p,
     Vp_Vn_v_n,
     Vp_Vn_v_p,
+    clk_10MHzOut,
     clk_ext_bufg,
     clk_ext_in,
     clk_to_adc,
     gpio_io_o,
-    prescaler_divide,
     reg_to_axi1,
     reg_to_axi2,
     reg_to_axi3);
@@ -330,11 +330,11 @@ module system_wrapper
   input Vaux9_v_p;
   input Vp_Vn_v_n;
   input Vp_Vn_v_p;
+  output clk_10MHzOut;
   output [0:0]clk_ext_bufg;
   input clk_ext_in;
   output clk_to_adc;
   output [1:0]gpio_io_o;
-  output [4:0]prescaler_divide;
   input [31:0]reg_to_axi1;
   input [31:0]reg_to_axi2;
   input [31:0]reg_to_axi3;
@@ -495,11 +495,11 @@ module system_wrapper
   wire Vaux9_v_p;
   wire Vp_Vn_v_n;
   wire Vp_Vn_v_p;
+  wire clk_10MHzOut;
   wire [0:0]clk_ext_bufg;
   wire clk_ext_in;
   wire clk_to_adc;
   wire [1:0]gpio_io_o;
-  wire [4:0]prescaler_divide;
   wire [31:0]reg_to_axi1;
   wire [31:0]reg_to_axi2;
   wire [31:0]reg_to_axi3;
@@ -661,11 +661,11 @@ module system_wrapper
         .Vaux9_v_p(Vaux9_v_p),
         .Vp_Vn_v_n(Vp_Vn_v_n),
         .Vp_Vn_v_p(Vp_Vn_v_p),
+        .clk_10MHzOut(clk_10MHzOut),
         .clk_ext_bufg(clk_ext_bufg),
         .clk_ext_in(clk_ext_in),
         .clk_to_adc(clk_to_adc),
         .gpio_io_o(gpio_io_o),
-        .prescaler_divide(prescaler_divide),
         .reg_to_axi1(reg_to_axi1),
         .reg_to_axi2(reg_to_axi2),
         .reg_to_axi3(reg_to_axi3));

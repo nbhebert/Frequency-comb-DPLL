@@ -414,41 +414,28 @@ class ConfigRPSettingsUI(Qt.QWidget):
 	def setClkSelect(self, checked=False):
 		if self.qradio_external_clk.isChecked():
 			# Valid VCO range is 600 MHz-1600 MHz according to DS181
-
-			# # For 200 MHz external clock input, these settings should yield 125 MHz ADC clock, 1000 MHz VCO
-			# f_ext          = 200e6
-			# CLKFBOUT_MULT  = 5
-			# CLKFBOUT_FRAC  = 0
-			# CLKOUT0_DIVIDE = 8
-
-			# # For 20 MHz external clock input, these settings should yield 125 MHz ADC clock, 1000 MHz VCO
-			# f_ext          = 20e6
-			# CLKFBOUT_MULT  = 50
-			# CLKFBOUT_FRAC  = 0
-			# CLKOUT0_DIVIDE = 8
-
-			# # For 100 MHz external clock input, these settings should yield 125 MHz ADC clock, 1000 MHz VCO
-			# f_ext          = 100e6
-			# CLKFBOUT_MULT  = 10
-			# CLKFBOUT_FRAC  = 0
-			# CLKOUT0_DIVIDE = 8
-
-			# For 180 MHz external clock input, these settings should yield 125 MHz ADC clock, 1125 MHz VCO
+			# CLKFBOUT sets the VCO, CLKOUT0 is a clock (generally 10 MHz) to output from the RP, CLKOUT1 is the ADC clock (125 MHz)
+            
+			# For 180 MHz external clock input, these settings should yield 125 MHz ADC clock, 1125 MHz VCO, 10 MHz output clock
 			f_ext          = 180e6
 			CLKFBOUT_MULT  = 6
 			CLKFBOUT_FRAC  = 250
-			CLKOUT0_DIVIDE = 9
-
-			self.sl.setADCclockPLL(f_ext, self.qradio_external_clk.isChecked(), CLKFBOUT_MULT, CLKFBOUT_FRAC, CLKOUT0_DIVIDE)
+			CLKOUT0_DIVIDE = 112
+			CLKOUT0_FRAC   = 500
+			CLKOUT1_DIVIDE = 9
+            
+			self.sl.setADCclockPLL(f_ext, self.qradio_external_clk.isChecked(), CLKFBOUT_MULT, CLKFBOUT_FRAC, CLKOUT0_DIVIDE, CLKOUT0_FRAC, CLKOUT1_DIVIDE)
 
 		else:
-			# For 200 MHz clock (internal), these settings should yield 125 MHz ADC clock, 1000 MHz VCO
+			# For 200 MHz clock (internal), these settings should yield 125 MHz ADC clock, 1000 MHz VCO, 10 MHz output clock
 			f_int          = 200e6
 			CLKFBOUT_MULT  = 5
 			CLKFBOUT_FRAC  = 0
-			CLKOUT0_DIVIDE = 8
+			CLKOUT0_DIVIDE = 100
+			CLKOUT0_FRAC   = 0
+			CLKOUT1_DIVIDE = 8
 
-			self.sl.setADCclockPLL(f_int, self.qradio_external_clk.isChecked(), CLKFBOUT_MULT, CLKFBOUT_FRAC, CLKOUT0_DIVIDE) # calling this crashes the thing...
+			self.sl.setADCclockPLL(f_int, self.qradio_external_clk.isChecked(), CLKFBOUT_MULT, CLKFBOUT_FRAC, CLKOUT0_DIVIDE, CLKOUT0_FRAC, CLKOUT1_DIVIDE) # calling this crashes the thing...
 
 
 		# make sure to update the lockpoint frequencies, in case the ADC clock frequency changed:
