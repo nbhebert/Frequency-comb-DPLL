@@ -88,6 +88,7 @@ class SuperLaserLand_JD_RP:
 	xadc_base_addr    = 0x0001_0000
 	clkw_base_addr    = 0x0002_0000
 	clk_sel_base_addr = 0x0003_0000
+	clk_sel_base_addr_read = 0x0003_0008
 	clk_freq_reg1     = 0x0004_0000
 	clk_freq_reg2     = 0x0004_0008
 	clk_freq_reg3     = 0x0005_0000
@@ -2000,8 +2001,8 @@ class SuperLaserLand_JD_RP:
 
 	def read_clk_select(self):
 		# in the actual register, 1 means internal clock, 0 means external
-		reg = self.dev.read_Zynq_register_32bits(self.clk_sel_base_addr)		
-		self.clk_select = (not reg)
+		reg = self.dev.read_Zynq_AXI_register_uint32(self.clk_sel_base_addr_read)
+		self.clk_select = reg
 		return self.clk_select
 
 	# f_source is the frequency of the selected clock source (200 MHz in internal clock mode, can be whatever is connected to GPIO_P[5] in external clock mode)
