@@ -753,7 +753,7 @@ wire  [ 8-1: 0] led_o_hk;
 wire            digital_loop_hk;
 
 wire            clk_10MHzOut;
-wire            clk_10MHz_bufg;
+
 
 red_pitaya_hk i_hk (
   // system signals
@@ -809,12 +809,9 @@ assign exp_n_out[5] = power_comb;   // GPIO pin used to turn the comb on or off.
 assign exp_n_out[3] = 1'b0;   // unused GPIO set as output with 0V for the moment
 // assign exp_n_out[5] = exp_p_in[5];  // loopback from buffered input to output
 //assign exp_p_out[3] = exp_p_in[2];  // loopback from buffered input to output
+assign exp_p_out[3] = 1'b0;
 
 
-
-BUFR bufg_clk_10MHz    (.O (clk_10MHz_bufg   ), .I (clk_10MHzOut   ));
-
-ODDR oddr_exp_p_out3 ( .Q(exp_p_out[3]), .D1(1'b1), .D2(1'b0), .C(clk_10MHz_bufg), .CE(1'b1), .R(1'b0), .S(1'b0));
 
 // Use this to map the digital IO to the house keeping module:
 // IOBUF i_iobufp [8-1:0] (.O(exp_p_in), .IO(exp_p_io), .I(exp_p_out_hk), .T(~exp_p_dir) );
@@ -1019,22 +1016,66 @@ red_pitaya_pwm pwm [4-1:0] (
  .pwm_s ()
 );
 
+
+
+
+//---------------------------------------------------------------------------------
+//  Clock outputs
+
+// 10 MHz clock
+wire clk_10MHz_bufr;
+BUFR bufr_clk_10MHz    (.O (clk_10MHz_bufr   ), .I (clk_10MHzOut   ));
+//ODDR oddr_exp_p_out3 ( .Q(exp_p_out[3]), .D1(1'b1), .D2(1'b0), .C(clk_10MHz_bufr), .CE(1'b1), .R(1'b0), .S(1'b0));
+
+
+OBUFDS #(.IOSTANDARD ("DIFF_SSTL18_I"), .SLEW ("FAST")) i_OBUF_clk
+(
+  .O  ( daisy_p_o[1]  ),
+  .OB ( daisy_n_o[1]  ),
+  .I  ( clk_10MHz_bufr)
+);
+
+
+
+
+// 1 PPS
+wire flag;
+wire clk_1PPS;
+
+clock_counter clock_counter_inst (
+  .clk_in                  ( clk_10MHz_bufr ),   //10 MHz clock
+  .ncycles                 ( 24'b100110001001011010000000),   //number of fast clock cycles that we need to count (=10e6)
+  .flag                    ( flag ) //flag is high when counter is done
+);
+
+BUFHCE bufhce_clk_1PPS    (.O (clk_1PPS ), .I (clk_10MHzOut ), .CE(flag));
+
+
+
+OBUFDS #(.IOSTANDARD ("DIFF_SSTL18_I"), .SLEW ("FAST")) i_OBUF_dat
+(
+  .O  ( daisy_p_o[0]  ),
+  .OB ( daisy_n_o[0]  ),
+  .I  ( clk_1PPS      )
+);
+
+
 //---------------------------------------------------------------------------------
 //  Daisy chain
 //  simple communication module
 
-reg [3-1:0] daisy_counter;
+//reg [3-1:0] daisy_counter;
 
-wire clk_out_10;
+//wire clk_out_10;
 
-always @(posedge adc_clk) begin
-  if (adc_rstn == 1'b0) begin
-    daisy_counter <= 3'h0;
-  end
-  else begin
-    daisy_counter <= daisy_counter + 3'h1;
-  end
-end
+//always @(posedge adc_clk) begin
+//  if (adc_rstn == 1'b0) begin
+//    daisy_counter <= 3'h0;
+//  end
+//  else begin
+//    daisy_counter <= daisy_counter + 3'h1;
+//  end
+//end
 
 // clk_10MHz_sync 
 // (// Clock in ports
@@ -1046,8 +1087,8 @@ end
 //  );
 
 
-assign daisy_p_o = {clk_out_10, 1'bz};  //Important : if you want to use only one of the signals (p or n), terminate the other one with a 50 Ohm. To do so
-assign daisy_n_o = {~clk_out_10, 1'bz};   // we built a SATA connector with 2 SMA connector at the end (one for the "p" and one for the "n" signal).
+//assign daisy_p_o = {clk_out_10, 1'bz};  //Important : if you want to use only one of the signals (p or n), terminate the other one with a 50 Ohm. To do so
+//assign daisy_n_o = {~clk_out_10, 1'bz};   // we built a SATA connector with 2 SMA connector at the end (one for the "p" and one for the "n" signal).
 
 
 //---------------------------------------------------------------------------------
