@@ -80,7 +80,9 @@ class ConfigRPSettingsUI(Qt.QWidget):
 		self.qedit_int_vco_offset.blockSignals(True)
 		self.qedit_int_vco_offset.setText('{:.3f}'.format(vco_offset))
 		self.qedit_int_vco_offset.blockSignals(False)
-                                   
+		
+		self.qcombo_SATA.setCurrentIndex(0)
+		                           
 		#print("ConfigurationRPSettingsUI::loadParameters(): end")
 
 	def pushDefaultValues(self):
@@ -138,6 +140,9 @@ class ConfigRPSettingsUI(Qt.QWidget):
 		else:
 			self.qradio_external_clk.setChecked(True)
 
+		#get value SATA mode
+		SATAmode = self.sl.get_SATA()
+		self.qcombo_SATA.setCurrentIndex(SATAmode)
 
 		self.startTimers()
 
@@ -314,6 +319,23 @@ class ConfigRPSettingsUI(Qt.QWidget):
 
 
 		###################################################################################
+		SATA = Qt.QGridLayout()
+		self.qgroupbox_SATA = Qt.QGroupBox('Configure serial receiver (SATA)')
+		self.qgroupbox_SATA.setAutoFillBackground(True)
+		self.qlabel_SATA = Qt.QLabel('SATA mode:')
+		self.qcombo_SATA = Qt.QComboBox()
+		self.qcombo_SATA.addItems(['Off', 'Fast+Slow control', 'Training'])
+		self.qcombo_SATA.setCurrentIndex(0)
+		self.qcombo_SATA.currentIndexChanged.connect(self.setSATA)
+
+		SATA.addWidget(self.qlabel_SATA, 2,1)
+		SATA.addWidget(self.qcombo_SATA, 2,2)
+		#SATA.addItem(Qt.QSpacerItem(0, 0, Qt.QSizePolicy.MinimumExpanding, Qt.QSizePolicy.Minimum), 3, 0)
+		#SATA.setRowStretch(3, 2)
+
+		self.qgroupbox_SATA.setLayout(SATA)
+
+		###################################################################################
 			
 		self.group = Qt.QGroupBox('RP configuration')
 		self.group.setAutoFillBackground(True)
@@ -326,6 +348,7 @@ class ConfigRPSettingsUI(Qt.QWidget):
 		group.addWidget(self.qgroupbox_read_data, 3, 0, 1, 3)
 		group.addWidget(self.qgroupbox_fanUI,     4, 0, 1, 1)
 		group.addWidget(self.qbtn_reconnect,      4, 1, 1, 1)
+		group.addWidget(self.qgroupbox_SATA,      4, 2, 1, 1)
 
 		#vbox = Qt.QVBoxLayout()
 		#vbox.addStretch(1)
@@ -487,7 +510,11 @@ class ConfigRPSettingsUI(Qt.QWidget):
 			data = 0
 		self.sl.set_mux_pll2(data)
 
-
+	@logCommsErrorsAndBreakoutOfFunction()  
+	def setSATA(self, value):
+		index = self.qcombo_SATA.currentIndex()
+		self.sl.set_SATA(index)
+	
 
 	
 if __name__ == '__main__':

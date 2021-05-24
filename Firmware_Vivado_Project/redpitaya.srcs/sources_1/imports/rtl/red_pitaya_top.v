@@ -299,9 +299,9 @@ assign ps_sys_ack   = |(sys_cs & sys_ack);
 // assign sys_err  [4       ] =  1'b0;
 // assign sys_ack  [4       ] =  1'b1;
 
-assign sys_rdata[7*32+:32] = 32'h0; 
-assign sys_err  [7       ] =  1'b0;
-assign sys_ack  [7       ] =  1'b1;
+// assign sys_rdata[7*32+:32] = 32'h0; 
+// assign sys_err  [7       ] =  1'b0;
+// assign sys_ack  [7       ] =  1'b1;
 
 ////////////////////////////////////////////////////////////////////////////////
 // local signals
@@ -383,7 +383,7 @@ BUFG bufg_dac_clk_1x (.O (dac_clk_1x), .I (pll_dac_clk_1x));
 BUFG bufg_dac_clk_2x (.O (dac_clk_2x), .I (pll_dac_clk_2x));
 BUFG bufg_dac_clk_2p (.O (dac_clk_2p), .I (pll_dac_clk_2p));
 BUFG bufg_ser_clk    (.O (adc_clk_2x), .I (pll_clk_adc_2x));
-//BUFG bufg_pwm_clk    (.O (pwm_clk   ), .I (pll_pwm_clk   ));
+BUFG bufg_pwm_clk    (.O (sata_clk   ), .I (pll_pwm_clk   ));   //PWM clock from pll module used for SATA module instead. The actual PWM clock is derived from another clock.
 assign pwm_clk = adc_clk_2x;
 
 // ADC reset (active low) 
@@ -519,6 +519,7 @@ dpll_wrapper dpll_wrapper_inst (
   .DACout0                 (  DACout0                    ),
   .DACout1                 (  DACout1                    ),
   .DACout2                 (  DACout2                    ),
+  .vco_SATA_voltage        (  dataSATA_rx_sync           ),
 
   .osc_output(osc_output),
   .power_comb(power_comb), // power comb select register. 1 = off, 0 = on
@@ -1124,5 +1125,74 @@ OBUFDS #(.IOSTANDARD ("DIFF_SSTL18_I"), .SLEW ("FAST")) i_OBUF_dat
   assign exp_p_out[1] = 0; // before 2018-06-29: max5541_csb, now is just an input (unused, but wired in parallel with an output on one of the boards
 
   assign exp_n_out[3] = opamp_30V_enable; // this turns ON Q1 in the schematic, which turns on Q2, which activates 15 mA of bias current into the non-inverting pin in order to put the opamp inside it's common-mode input range
+
+
+
+//---------------------------------------------------------------------------------
+//  Daisy chain
+//  simple communication module
+
+wire daisy_rx_rdy ;
+wire dly_clk = fclk[3]; // 200MHz clock from PS - used for IDELAY (optionaly)
+wire                  sata_clk;
+wire	     [32-1:0] dataSATA_rx;
+wire         [32-1:0] dataSATA_rx_sync;
+//wire	     [32-1:0] dataSATA_tx;
+//assign dataSATA_tx = {dac_b, 2'b00, dac_b, 2'b00};
+wire par_clk;
+
+red_pitaya_daisy i_daisy (
+   // SATA connector
+  .daisy_p_o       (                             ),  // line 1 is clock capable
+  .daisy_n_o       (                             ),
+  .daisy_p_i       (  daisy_p_i                  ),  // line 1 is clock capable
+  .daisy_n_i       (  daisy_n_i                  ),
+   // Data
+  .ser_clk_i       (  adc_clk                    ),  // high speed serial
+  .dly_clk_i       (  dly_clk                    ),  // delay clock
+   // TX
+  .par_clk_i       (  sata_clk                   ),  // data paralel clock
+  .par_rstn_i      (  adc_rstn                   ),  // reset - active low
+  .par_rdy_o       (  daisy_rx_rdy               ),
+  .par_dv_i        (  daisy_rx_rdy               ),
+  .par_dat_i       (              		 		 ),
+   // RX
+  .par_clk_o       (  par_clk                    ),
+  .par_rstn_o      (                             ),
+  .par_dv_o        (                             ),
+  .par_dat_o       (  dataSATA_rx                ),
+
+  .debug_o         (/*led_o*/                    ),
+   // System bus
+  .sys_clk_i       (  sys_clk                    ),  // clock
+  .sys_rstn_i      (  sys_rstn                   ),  // reset - active low
+  .sys_addr_i      (  sys_addr                   ),  // address
+  .sys_wdata_i     (  sys_wdata                  ),  // write data
+  .sys_sel_i       (  sys_sel                    ),  // write byte select
+  .sys_wen_i       (  sys_wen[7]                 ),  // write enable
+  .sys_ren_i       (  sys_ren[7]                 ),  // read enable
+  .sys_rdata_o     (  sys_rdata[ 7*32+31: 7*32]  ),  // read data
+  .sys_err_o       (  sys_err[7]                 ),  // error indicator
+  .sys_ack_o       (  sys_ack[7]                 )   // acknowledge signal
+);
+
+//Async FIFO synchronizer to sync the remote data with the local clock and avoid metastability issues
+fifo_generator_1 async_fifo (
+  .wr_clk(par_clk),  // input wire wr_clk
+  .rd_clk(adc_clk),  // input wire rd_clk
+  .din(dataSATA_rx),        // input wire [31 : 0] din
+  .wr_en(1'b1),    // input wire wr_en
+  .rd_en(1'b1),    // input wire rd_en
+  .dout(dataSATA_rx_sync),      // output wire [31 : 0] dout
+  .full(),      // output wire full
+  .empty()    // output wire empty
+);
+
+
+
+
+
+
+
 endmodule
 

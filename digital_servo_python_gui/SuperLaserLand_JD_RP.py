@@ -1847,6 +1847,40 @@ class SuperLaserLand_JD_RP:
 		status = self.read_RAM_dpll_wrapper(self.BUS_ADDR_POW_COMB)
 		return status
         
+	def set_SATA(self,index):
+		if index == 0:  #Off
+			self.dev.write_Zynq_register_32bits(0x40700000, 0x0)
+			self.dev.write_Zynq_register_32bits(0x40700008, 0x0)
+		elif index == 1:    #Data receiving mode
+			self.dev.write_Zynq_register_32bits(0x40700000, 0x3)
+			self.dev.write_Zynq_register_32bits(0x40700008, 0x0)
+		elif index == 2:    #Training mode
+			self.dev.write_Zynq_register_32bits(0x40700000, 0x3)
+			self.dev.write_Zynq_register_32bits(0x40700008, 0x1)
+			time.sleep(0.1)
+			rcv = int.from_bytes(self.dev.read_Zynq_register_32bits(0x40700008),'little')
+			if rcv == 17:
+				print('SATA training successful')
+			else:
+				print('SATA training failed')
+                
+	def get_SATA(self):
+		txrx = int.from_bytes(self.dev.read_Zynq_register_32bits(0x40700000),'little')
+		training = int.from_bytes(self.dev.read_Zynq_register_32bits(0x40700008),'little')
+		print(txrx)
+		print(training)
+		if txrx == 0:  #Off
+			return 0
+		elif txrx == 3 and training == 16:    #Data receiving mode
+			return 1
+		elif txrx == 3 and (training == 1 or training == 17):    #Training mode
+			return 2
+		else:
+			print('Invalid state read from the RedPitaya for the SATA module')
+			return 0
+
+
+
 	# scales the offset of the output tone produced by the VCO right before the ADC.
 	# offset = [-1 to 1]
 	def set_internal_VCO_offset(self, offset):

@@ -16,6 +16,7 @@ module dpll_wrapper(
     output wire signed [15:0] DACout0,
     output wire signed [15:0] DACout1,
     output wire signed [15:0] DACout2,
+    input  wire signed [32-1:0] vco_SATA_voltage,
 
     output wire osc_output,
     output wire power_comb, // ability to send an enable signal to the pump drivers
@@ -745,6 +746,46 @@ wire        [10-1:0]    DDC1_output;            // diff(phi)/(2*pi) * 2**10
          .update_flag()
     );
 
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+//Adjust the reference frequency using the voltage data coming from the SATA connector
+//There are two concatenated data streams in vco_SATA_voltage: bits 32-1:18 are for a low-gain in-loop controller of the laser frequency, and 16:2 are for a high-gain controller of the laser frequency
+//The range of the low-gain VCO is 31.25e6/2^4 = +/- 2 MHz. This number is doubled if using a SHG
+//The range of the high-gain VCO is 31.25e6/2^1 = +/- 16 MHz. This number is doubled if using a SHG
+///////////////////////////////////////////////////////////////////////////////
+wire       [47:0]  reference_frequency1_adj;
+
+//Filter the two SATA data streams before using them to control the laser frequency to limit the slew rate and allow the lock to follow
+wire       [14-1+18:0] vco_SATA_voltage_filt_1_wide;
+wire       [14-1:0] vco_SATA_voltage_filt_1;
+IIR_LPF # (
+    .N_DATA(14)
+)
+IIR_LPF_vco_SATA_1 (
+    .clk      ( clk1                                ),
+    .coef     ( 18'd264                             ), //for filter cutoff at fc we need 2*pi*fc/fs*2^BIT_SHIFT_FILTER
+    .data_in  ( vco_SATA_voltage[32-1:18]           ),
+    .data_out ( vco_SATA_voltage_filt_1_wide        )
+);
+assign vco_SATA_voltage_filt_1 = vco_SATA_voltage_filt_1_wide[14+18-1:18];
+
+wire       [14-1+18:0] vco_SATA_voltage_filt_2_wide;
+wire       [14-1:0] vco_SATA_voltage_filt_2;
+IIR_LPF # (
+    .N_DATA(14)
+)
+IIR_LPF_vco_SATA_2 (
+    .clk      ( clk1                                ),
+    .coef     ( 18'd1                               ), //for filter cutoff at fc we need 2*pi*fc/fs*2^BIT_SHIFT_FILTER
+    .data_in  ( vco_SATA_voltage[16-1:2]           ),
+    .data_out ( vco_SATA_voltage_filt_2_wide        )
+);
+assign vco_SATA_voltage_filt_2 = vco_SATA_voltage_filt_2_wide[14+18-1:18];
+
+assign reference_frequency1_adj = $signed(reference_frequency1) + ($signed({{48-14{vco_SATA_voltage_filt_1[13]}}, vco_SATA_voltage_filt_1[13:0]}) <<< (48-14-1-4)) + ($signed({{48-14{vco_SATA_voltage_filt_2[13]}}, vco_SATA_voltage_filt_2[13:0]}) <<< (48-14-1-1));
+
      
 // The actual DDC:
 DDC_wideband_filters DDC1_inst (
@@ -756,7 +797,7 @@ DDC_wideband_filters DDC1_inst (
      
      // Configuration
      .boxcar_filter_size(boxcar_filter_size),
-    .reference_frequency(reference_frequency1), 
+    .reference_frequency(reference_frequency1_adj), 
      .ddc_filter_select(ddc1_filter_select),
      
     // Reference tone output:

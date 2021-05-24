@@ -1,5 +1,7 @@
 <devices_data>
 	<Device_1 strSerial = "002632f0774b" color = "#E37405" name = "Red Pitaya Yb Comb 1" shorthand = "RP Yb Comb 1"  config_file = "system_parameters_YbComb1.xml" 	 />
 	<Device_2 strSerial = "002632f07417" color = "#53b7d2" name = "Red Pitaya Offset lock Blue" shorthand = "RP Offset lock blue"  config_file = "system_parameters_offsetLockBlue.xml" 	 />
+	<Device_3 strSerial = "002632f07702" color = "#D9A921" name = "Red Pitaya Offset lock Yellow" shorthand = "RP Offset lock yellow"  config_file = "system_parameters_offsetLockYellow.xml" 	 />
+	
 	<!-- For color, see http://www.color-hex.com/ or any other hex color resource-->
 </devices_data>
