@@ -752,8 +752,8 @@ wire        [10-1:0]    DDC1_output;            // diff(phi)/(2*pi) * 2**10
 ///////////////////////////////////////////////////////////////////////////////
 //Adjust the reference frequency using the voltage data coming from the SATA connector
 //There are two concatenated data streams in vco_SATA_voltage: bits 32-1:18 are for a low-gain in-loop controller of the laser frequency, and 16:2 are for a high-gain controller of the laser frequency
-//The range of the low-gain VCO is 31.25e6/2^4 = +/- 2 MHz. This number is doubled if using a SHG
-//The range of the high-gain VCO is 31.25e6/2^1 = +/- 16 MHz. This number is doubled if using a SHG
+//The range of the low-gain VCO is 31.25e6/2^8 = +/- 122 kHz. This number is doubled if using a SHG
+//The range of the high-gain VCO is 31.25e6/2^4 = +/- 2 MHz. This number is doubled if using a SHG
 ///////////////////////////////////////////////////////////////////////////////
 wire       [47:0]  reference_frequency1_adj;
 
@@ -784,7 +784,7 @@ IIR_LPF_vco_SATA_2 (
 );
 assign vco_SATA_voltage_filt_2 = vco_SATA_voltage_filt_2_wide[14+18-1:18];
 
-assign reference_frequency1_adj = $signed(reference_frequency1) + ($signed({{48-14{vco_SATA_voltage_filt_1[13]}}, vco_SATA_voltage_filt_1[13:0]}) <<< (48-14-1-4)) + ($signed({{48-14{vco_SATA_voltage_filt_2[13]}}, vco_SATA_voltage_filt_2[13:0]}) <<< (48-14-1-1));
+assign reference_frequency1_adj = $signed(reference_frequency1) + ($signed({{48-14{vco_SATA_voltage_filt_1[13]}}, vco_SATA_voltage_filt_1[13:0]}) <<< (48-14-1-8)) + ($signed({{48-14{vco_SATA_voltage_filt_2[13]}}, vco_SATA_voltage_filt_2[13:0]}) <<< (48-14-1-4));
 
      
 // The actual DDC:
