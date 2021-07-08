@@ -1597,10 +1597,13 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
             # Compute the spectrum:
             # We first perform decimation on the data since we don't have useful information above the cut-off frequency anyway:
             start_time = time.perf_counter()
-            N_decimation = 10
+            N_decimation = 8
             fs_new = self.sl.fs/N_decimation
             #inst_freq_decimated = decimate(inst_freq, N_decimation, zero_phase=False)
-            inst_freq_decimated = decimate(detrend(inst_freq), N_decimation, zero_phase=False)
+            #DECIMATION IS NOW PERFORMED INSIDE THE FPGA TO SEE LOWER FOURIER FREQUENCIES
+            #inst_freq_decimated = decimate(detrend(inst_freq), N_decimation, zero_phase=False)
+            inst_freq_decimated = (inst_freq)
+
             
 #            inst_freq_decimated = inst_freq
 #            fs_new = self.sl.fs
@@ -1703,7 +1706,7 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
                 self.curve_DDC0_cumul_phase.setVisible(False)
             elif self.qcombo_ddc_plot.currentIndex() == 1:
                 # Compute the phase noise time-domain standard deviation:
-                phasenoise_stddev = np.std(np.cumsum(inst_freq*2*np.pi/self.sl.fs))
+                phasenoise_stddev = np.std(np.cumsum(inst_freq*2*np.pi/(self.sl.fs/8))) #Decimation by 8x in the FPGA
                 # Display the phase noise (equal to 1/f^2 times the frequency noise PSD)
                 self.curve_DDC0_spc.setData(frequency_axis[1:last_index_shown], 10*np.log10(spc[1:last_index_shown] + 1e-20) - 20*np.log10(frequency_axis[1:last_index_shown]))
                 if self.bAveragePhaseNoise:
@@ -1755,7 +1758,7 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
             elif self.qcombo_ddc_plot.currentIndex() == 2:
                 # Display the raw, time-domain instantaneous frequency output by the DDC block, mostly for debugging:
                 
-                time_axis = np.arange(0, len(inst_freq))/self.sl.fs
+                time_axis = np.arange(0, len(inst_freq))/(self.sl.fs/8)
                 
                 self.curve_DDC0_spc.setData(time_axis, inst_freq)
                 self.curve_DDC0_spc_avg.setVisible(False)
@@ -1772,9 +1775,9 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
             elif self.qcombo_ddc_plot.currentIndex() == 3:
                 # Display the time-domain instantaneous phase output by the DDC block (computed by integrating the frequency), mostly for debugging:
                 
-                time_axis = np.arange(0, len(inst_freq))/self.sl.fs
-                inst_phase = np.cumsum(inst_freq*2*np.pi/self.sl.fs)
-                
+                time_axis = np.arange(0, len(inst_freq))/(self.sl.fs/8)
+                inst_phase = np.cumsum(inst_freq*2*np.pi/(self.sl.fs/8))
+                inst_phase = inst_phase - np.mean(inst_phase)
                 
                 
                 # Compute the phase noise time-domain standard deviation:

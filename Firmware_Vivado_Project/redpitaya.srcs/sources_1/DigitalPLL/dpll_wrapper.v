@@ -421,6 +421,21 @@ end
 ///////////////////////////////////////////////////////////////////////////////
 // Multiplexer which selects the desired input for the Data logger (formerly DDR2 logger)
 ///////////////////////////////////////////////////////////////////////////////
+
+    // Filter and decimate instantaneous frequencies before sending to logger
+    wire decim8x_clkEn;
+    
+    prepare_freq_logger prepare_freq_logger_inst (
+         .clk(clk1), 
+         .rst(rst_frontend0 || rst_frontend0), 
+         .freq0(inst_frequency0_projected_wide), 
+         .freq1(inst_frequency1_projected_wide), 
+         .freq0_out(inst_frequency0_filtered),
+         .freq1_out(inst_frequency1_filtered),
+         .decim8x_clkEn(decim8x_clkEn)
+         );
+
+
 wire    [15:0]         selector;
 
 // counter connected to a free input on the multiplexer, helps for debugging
@@ -437,8 +452,8 @@ multiplexer_NbitsxMsignals_to_Nbits
     .clk(clk1), 
     .in0({1'b1, ADC0_multiplexed}), 
     .in1({1'b1, ADC1_multiplexed}), 
-    .in2({1'b1, {4{inst_frequency0[9]}}, inst_frequency0, 2'b0}), // Inst freq after DDC 0, sign extended to 16 bits
-    .in3({1'b1, {4{inst_frequency1[9]}}, inst_frequency1, 2'b0}), // Inst freq after DDC 1, sign extended to 16 bits
+    .in2({decim8x_clkEn, inst_frequency0_filtered}), // Inst freq after DDC 0 and filter
+    .in3({decim8x_clkEn, inst_frequency1_filtered}), // Inst freq after DDC 1 and filter
     .in4({VNA_output_to_logger_clk_enable, VNA_output_to_logger}), // VNA output
     .in5({1'b1, debugging_counter[15:0]}),  // counter, simply for debugging the DDR2 Logger/USB link
     .in6({1'b1, DACout0}), 
@@ -536,8 +551,7 @@ wire        [11:0]  boxcar_filter_size = 12'd20;    // Filter with a notch at 5 
 wire        [47:0]  reference_frequency0;// = 48'b110011001100 11001100110011001100110011001100;    // 5 MHz reference frequency, should be move to a configurable value from the PC eventually
 wire        [9:0]       wrapped_phase0;     // phi/(2*pi) * 2**10
 wire        [9:0]       inst_frequency0;        // diff(phi)/(2*pi) * 2**10
-wire [10-1+12:0]    inst_frequency0_filtered;       // this is the output of a boxcar filter on the inst_frequency signal, before sending to the DDR2 logger
-wire [10-1+2:0] inst_frequency0_filtered_small; // overall filter gain is only equal to its length (4) so we don't really need all the bits
+wire     [16-1:0]  inst_frequency0_filtered; // filtered frequency resized on 16 bits for DDR2 logger
 wire [1:0] ddc0_filter_select, ddc1_filter_select;
 wire select_phase_or_freq0, select_phase_or_freq1;
 wire [3:0] angleSelect_0, angleSelect_1;
@@ -687,7 +701,7 @@ parallel_bus_register_counter_mode (
     .register_output(triangular_mode), 
     .update_flag()
     );
-
+    
       
     // ///////////////////////////////////////////////////////////////////////////////
     // // pwm_level
@@ -728,8 +742,7 @@ wire     [80-1:0]  dfr_phase_modulus, dfr_phase_adjust, delta_fr;
 wire               goto_new_freq_at_next_zerocrossing, force_nominal_freq;
 wire        [9:0]  wrapped_phase1;     // phi/(2*pi) * 2**10
 wire        [9:0]  inst_frequency1;        // diff(phi)/(2*pi) * 2**10 //now output from the mux that select between DDC1_output, inst_frequency0 or pll0_output
-wire  [10-1+12:0]  inst_frequency1_filtered;       // this is the output of a boxcar filter on the inst_frequency signal, before sending to the DDR2 logger
-wire   [10-1+2:0]  inst_frequency1_filtered_small; // overall filter gain is only equal to its length (4) so we don't really need all the bits
+wire     [16-1:0]  inst_frequency1_filtered; // filtered frequency resized on 16 bits for DDR2 logger
 
 wire        [10-1:0]    DDC1_output;            // diff(phi)/(2*pi) * 2**10
 
@@ -905,27 +918,6 @@ dual_type_frequency_counter dual_type_frequency_counter_inst1 (
     .output_clk_enable(counter1_out_clk_enable)
     );
      
-     // NOT USED ANYMORE:
-// Short filter applied to the inst_frequency output of the ddc before sending the data to the logger
-// Simply to remove a little bit of noise at higher frequencies before decimation
-// Length is fixed at 4 samples. (first null at 25 MHz)
-adjustable_boxcar_filter 
-    # (
-    .MAXIMUM_SIZE(6),
-    .DATA_WIDTH(10)
-    )
-    adjustable_boxcar_filter_freq1 (
-    .rst(rst_frontend1), 
-    .clk(clk1), 
-    .input_clk_enable(1'b1), 
-    .input_data(inst_frequency1), 
-    .filter_size(12'd4), 
-    .output_clk_enable(), 
-    .output_data(inst_frequency1_filtered)
-    );
-assign inst_frequency1_filtered_small = inst_frequency1_filtered[10-1+2:0];
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // Loop filters for DAC 0:

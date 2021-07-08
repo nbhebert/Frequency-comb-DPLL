@@ -938,8 +938,8 @@ class SuperLaserLand_JD_RP:
 		# convert_2bytes_signed = np.array((2**(0*8), 2**(1*8)), dtype=np.int16)
 		# samples_out         = np.dot(data_buffer_reshaped[:, :].astype(np.int16), convert_2bytes_signed)
 
-		# The samples represent instantaneous frequency as: samples_out = diff(phi)/(2*pi*fs) * 2**12, where phi is the phase in radians
-		inst_freq = (samples_out.astype(dtype=float))/2**10 * self.fs/4
+		# The samples represent instantaneous frequency as: samples_out = diff(phi)/(2*pi*fs) * 2**16, where phi is the phase in radians
+		inst_freq = (samples_out.astype(dtype=float))/2**16 * self.fs
 		# print('Mean frequency error = %f Hz' % np.mean(inst_freq))
 		
 
@@ -2064,7 +2064,6 @@ class SuperLaserLand_JD_RP:
 		reg |= (CLKOUT0_FRAC & ((1<<10)-1)) << 8
 		if CLKOUT0_FRAC != 0:
 			reg |= (1 & ((1<<18)-1)) << 18  #Enable fractional multiplier on bit 18
-		print(bin(reg))
 		self.dev.write_Zynq_AXI_register_uint32(self.clkw_base_addr + 0x208, reg)
 		# Clock configuration register 2 (table 4-2 in PG065)
 		reg = (CLKOUT1_DIVIDE & ((1<<8)-1)) << 0
