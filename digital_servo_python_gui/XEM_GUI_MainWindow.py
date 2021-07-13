@@ -120,7 +120,7 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
 #        self.output_controls = (True, True, True)
 #        self.initUI()
         
-    def __init__(self, sl, strTitle, selected_ADC, output_controls, sp, custom_style_sheet, strFGPASerialNumber):
+    def __init__(self, sl, strTitle, selected_ADC, output_controls, sp, custom_style_sheet, strFGPASerialNumber, RP_Settings):
         super(XEM_GUI_MainWindow, self).__init__()
         
         self.strTitle = strTitle
@@ -132,6 +132,7 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
         self.setObjectName('MainWindow')
         self.setStyleSheet(custom_style_sheet)
         self.strFGPASerialNumber = strFGPASerialNumber
+        self.RP_Settings = RP_Settings
 
         self.logger = logging.getLogger(__name__)
         self.logger_name = ':XEM_GUI_MainWindow'
@@ -791,6 +792,10 @@ class XEM_GUI_MainWindow(QtGui.QWidget):
         else:                  
             self.logger.info('Red_Pitaya_GUI{}: Comb Disabled'.format(self.logger_name))
             self.qchk_powercomb.setStyleSheet('font-size: 18pt; color: white; background-color: red')
+            #Before powering the comb off, switch back to internal clock
+            if self.RP_Settings.qradio_external_clk.isChecked():
+                self.RP_Settings.qradio_internal_clk.setChecked(1)
+                self.RP_Settings.setClkSelect()
             self.sl.PowerOff()
             
 

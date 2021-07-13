@@ -440,23 +440,28 @@ class ConfigRPSettingsUI(Qt.QWidget):
 			# CLKFBOUT sets the VCO, CLKOUT0 is a clock (generally 10 MHz) to output from the RP, CLKOUT1 is the ADC clock (125 MHz)
             
 			# For 125 MHz external clock input, these settings should yield 125 MHz ADC clock, 1000 MHz VCO, 10 MHz output clock
-			# f_ext          = 125e6
-			# CLKFBOUT_MULT  = 8
-			# CLKFBOUT_FRAC  = 0
-			# CLKOUT0_DIVIDE = 100
-			# CLKOUT0_FRAC   = 0
-			# CLKOUT1_DIVIDE = 8
+			f_ext          = 125e6
+			CLKFBOUT_MULT  = 8
+			CLKFBOUT_FRAC  = 0
+			CLKOUT0_DIVIDE = 100
+			CLKOUT0_FRAC   = 0
+			CLKOUT1_DIVIDE = 8
 
 			# For 180 MHz external clock input, these settings should yield 125 MHz ADC clock, 1125 MHz VCO, 10 MHz output clock
-			f_ext          = 180e6
-			CLKFBOUT_MULT  = 6
-			CLKFBOUT_FRAC  = 250
-			CLKOUT0_DIVIDE = 112
-			CLKOUT0_FRAC   = 500
-			CLKOUT1_DIVIDE = 9
+			# f_ext          = 180e6
+			# CLKFBOUT_MULT  = 6
+			# CLKFBOUT_FRAC  = 250
+			# CLKOUT0_DIVIDE = 112
+			# CLKOUT0_FRAC   = 500
+			# CLKOUT1_DIVIDE = 9
             
-			self.sl.setADCclockPLL(f_ext, self.qradio_external_clk.isChecked(), CLKFBOUT_MULT, CLKFBOUT_FRAC, CLKOUT0_DIVIDE, CLKOUT0_FRAC, CLKOUT1_DIVIDE)
-
+            
+			#Before switching to the external lock, lets verify that there is a suitable clock. Otherwise, keep the internal clock
+			if np.abs(f_ext - self.sl.getExtClockFreq())/f_ext < 0.02:
+				self.sl.setADCclockPLL(f_ext, self.qradio_external_clk.isChecked(), CLKFBOUT_MULT, CLKFBOUT_FRAC, CLKOUT0_DIVIDE, CLKOUT0_FRAC, CLKOUT1_DIVIDE)
+			else:
+				self.qradio_internal_clk.setChecked(1)
+				print('External clock not suitable')
 		else:
 			# For 200 MHz clock (internal), these settings should yield 125 MHz ADC clock, 1000 MHz VCO, 10 MHz output clock
 			f_int          = 200e6

@@ -1254,6 +1254,7 @@
       <Filter Type="Srcs"/>
       <File Path="$PSRCDIR/sources_1/DigitalPLL/N_times_clk_FIR_wrapper.vhd">
         <FileInfo>
+          <Attr Name="AutoDisabled" Val="1"/>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>

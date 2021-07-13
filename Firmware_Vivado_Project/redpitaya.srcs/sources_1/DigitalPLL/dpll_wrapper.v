@@ -7,6 +7,7 @@ module dpll_wrapper(
 
     
     input  wire               clk1,         // global clock, designed for 100 MHz clock rate
+    input  wire               osc_clock,   // clock from the FPGA which is always present -- for the switching supply
     input  wire               clk1_timesN,  // this should be N times the clock, phase-locked to clk1, N matching what was input in the FIR compiler for fir_compiler_minimumphase_N_times_clk
     input  wire               rst,
 
@@ -120,7 +121,7 @@ wire [24-1:0] oscillator_modulus_active;
 
     variable_duty_cycle_oscillator variable_duty_cycle_oscillator_inst
     (
-        .clk(clk1),
+        .clk(osc_clock),
         .benable(osc_enable),
         .bpolarity(osc_polarity),
         .modulus(oscillator_modulus),                  // sets the period

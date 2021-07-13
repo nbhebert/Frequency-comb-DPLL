@@ -511,6 +511,7 @@ dpll_wrapper dpll_wrapper_inst (
   
   .clk1                    (  adc_clk                    ), // global clock, designed for 100 MHz clock rate
   .clk1_timesN             (  adc_clk_2x                 ), // this should be N times the clock, phase-locked to clk1, N matching what was input in the FIR compiler for fir_compiler_minimumphase_N_times_clk
+  .osc_clock               (  fclk[0]                    ), // this 125MHz clock is always present as it comes from the FPGA
   .rst                     (  dpll_rst                   ), // currently only use the resets driven by the system bus
 
   // analog data input/output interface
